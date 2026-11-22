@@ -1517,10 +1517,11 @@
             measurementId: "G-87LT7GBMSQ"
         };
 
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.database();
 
-        // Pure India Standard Time (IST) helper so clocks/slots never drift by 1 min or local timezone offset
         function getIndiaNow() {
             const istStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
             return new Date(istStr);
@@ -1697,7 +1698,6 @@
             db.ref('weeklyGameChatData').set(weeklyGameChatData);
         }
 
-        // Smart Random protecting 20% owner share (max payout <= 80% of total slot bets)
         function getLowLoadPatti(lotteryType, slotTimeStr, stageType) {
             let allPattis = getAllMappedPattisByType("Single Pana");
             if (allPattis.length === 0) allPattis = ["123", "134", "145", "156", "167"];
@@ -1722,7 +1722,6 @@
                 }
             });
 
-            // Keep 20 out of 100 (20% owner margin) -> max payout 80%
             let maxAllowedPayout = totalBetAmt * 0.80;
             let recentList = recentDrawHistory[lotteryType] || [];
             let sortedDigits = [0,1,2,3,4,5,6,7,8,9].sort((a,b) => digitLoads[a] - digitLoads[b]);
@@ -1765,7 +1764,6 @@
                 return `${fallbackOpenDigit}${fallbackCloseDigit}`;
             }
 
-            // Keep 20 out of 100 (20% owner margin) -> max payout 80%
             let maxAllowedPayout = totalJodiPts * 0.80;
             let recentList = recentDrawHistory[lotteryType] || [];
             let candidates = JODI_99_SET.filter(j => (jodiLoads[j] || 0) <= maxAllowedPayout && !recentList.includes(j));
@@ -3129,7 +3127,6 @@
             });
         }
 
-        // Smart random respects adminLocked slots and keeps 20% owner margin
         function processSlotProgression(slotsList, lotteryType) {
             let now = getIndiaNow();
             let currentMins = now.getHours() * 60 + now.getMinutes();
@@ -3973,410 +3970,226 @@
 
         function switchLottery(type) {
             currentType = type;
-            let body = document.body;
-            let shubhBtn = document.getElementById('tab-shubh');
-            let dhanBtn = document.getElementById('tab-dhan');
+            const shubhBtn = document.getElementById('tab-shubh');
+            const dhanBtn = document.getElementById('tab-dhan');
+            const titleEl = document.getElementById('lottery-title');
+            const chartTitleEl = document.getElementById('chart-header-title');
 
             if (type === 'shubh') {
-                body.className = "theme-shubh";
+                document.body.className = "theme-shubh";
                 shubhBtn.classList.remove('tab-inactive-dim');
                 dhanBtn.classList.add('tab-inactive-dim');
-                document.getElementById('lottery-title').innerText = '⭐ शुभ लक्ष्मी (15 मि. लाइव ड्रॉ)';
-                document.getElementById('chart-header-title').innerText = '📜 शुभ लक्ष्मी लाइव परिणाम चार्ट';
-                document.getElementById('admin-timer-label').innerText = '⏳ शुभ लक्ष्मी एडमिन टाइमर (15 मि.)';
+                titleEl.innerText = "⭐ शुभ लक्ष्मी (15 मि. लाइव ड्रॉ)";
+                chartTitleEl.innerText = "📜 शुभ लक्ष्मी लाइव परिणाम चार्ट";
             } else {
-                body.className = "theme-dhan";
+                document.body.className = "theme-dhan";
                 dhanBtn.classList.remove('tab-inactive-dim');
                 shubhBtn.classList.add('tab-inactive-dim');
-                document.getElementById('lottery-title').innerText = '💰 धन लक्ष्मी (30 मि. लाइव ड्रॉ)';
-                document.getElementById('chart-header-title').innerText = '📜 धन लक्ष्मी लाइव परिणाम चार्ट';
-                document.getElementById('admin-timer-label').innerText = '⏳ धन लक्ष्मी एडमिन टाइमर (30 मि.)';
+                titleEl.innerText = "💰 धन लक्ष्मी (30 मि. लाइव ड्रॉ)";
+                chartTitleEl.innerText = "📜 धन लक्ष्मी लाइव परिणाम चार्ट";
             }
             renderResults();
             updateLiveSpotlightBanner();
-            populateAdminSlots();
         }
 
-        function updateWalletUI() {
-            document.getElementById('wallet-balance').innerText = currentWallet;
-            document.getElementById('amar-wallet-bal').innerText = currentWallet;
-            document.getElementById('prof-balance').innerText = currentWallet;
-            document.getElementById('withdraw-max-bal').innerText = currentWallet;
-            document.getElementById('prof-locked-bonus').innerText = currentLockedBonus;
-
-            const bannerBox = document.getElementById('locked-bonus-banner-box');
-            const lockedValEl = document.getElementById('locked-bonus-val');
-            if (currentLockedBonus > 0) {
-                lockedValEl.innerText = currentLockedBonus;
-                bannerBox.classList.remove('hidden');
-            } else {
-                bannerBox.classList.add('hidden');
-            }
-        }
-
-        // ================= LIVE RESULT CHART =================
         function renderResults() {
             const container = document.getElementById('result-container');
+            if (!container) return;
             container.innerHTML = '';
-            let currentData = currentType === 'shubh' ? shubhSlotData : dhanSlotData;
-            if (!currentData) return;
+            let slotData = currentType === 'shubh' ? shubhSlotData : dhanSlotData;
+            if (!slotData) return;
 
-            let isAdminLoggedIn = activeUserPhone && usersDB[activeUserPhone] && usersDB[activeUserPhone].isSuperAdmin;
-
-            currentData.forEach((item, index) => {
-                if (item.type === 'lunch') {
+            slotData.forEach((slot) => {
+                if (slot.type === 'lunch') {
                     container.innerHTML += `
                         <div class="break-popup-card">
-                            <span class="break-popup-badge">LUNCH BREAK</span>
-                            <div class="break-popup-title">${item.display}</div>
-                            <div class="break-popup-time">⏰ ${item.timeRange}</div>
-                        </div>
-                    `;
+                            <span class="break-popup-badge">✨ विशेष ब्रेक घोषणा ✨</span>
+                            <div class="break-popup-title">${slot.display}</div>
+                            <div class="break-popup-time">⏰ ${slot.timeRange}</div>
+                        </div>`;
                 } else {
-                    let editBtnHtml = isAdminLoggedIn
-                        ? `<button type="button" class="chart-edit-btn" onclick="quickEditSlotResult(${index})">✏️ Edit</button>`
-                        : '';
+                    let resText = slot.display || "—";
+                    let lockedIcon = slot.adminLocked ? ` <span style="color:#ff4444; font-size:0.75rem;">🔒</span>` : "";
                     container.innerHTML += `
                         <div class="result-row">
-                            <span class="start-time">${item.start}</span>
-                            <div class="result-data">
-                                <div>${item.display}</div>
-                                ${editBtnHtml}
-                            </div>
-                            <span class="end-time">${item.end}</span>
-                        </div>
-                    `;
+                            <span class="start-time">${slot.start}</span>
+                            <span class="result-data">${resText}${lockedIcon}</span>
+                            <span class="end-time">${slot.end}</span>
+                        </div>`;
                 }
             });
         }
 
-        function quickEditSlotResult(index) {
-            let currentData = currentType === 'shubh' ? shubhSlotData : dhanSlotData;
-            let slot = currentData[index];
-            let newVal = prompt(`स्लॉट (${slot.start} - ${slot.end}) का नया परिणाम दर्ज करें (उदा. 123-45-678):`, (slot.display || "").replace(/<[^>]*>/g, '').trim());
-            if (newVal && newVal.trim() !== "") {
-                let clean = newVal.trim();
-                currentData[index].display = `<span class='unique-result-badge'>${clean}</span>`;
-                currentData[index].stage = "closed_declared";
-                currentData[index].adminLocked = true;
-                if (currentType === 'shubh') db.ref('shubhSlots').set(shubhSlotData);
-                else db.ref('dhanSlots').set(dhanSlotData);
-                recordIntoWeeklyGameChat(currentType, `${slot.start} EDIT: ${clean}`);
-                alert('✅ चार्ट का परिणाम तुरंत अपडेट हो गया!');
-            }
-        }
-
-        // ================= REAL-TIME SYSTEM (PURE IST + 1 MIN LOCK + 1 MIN RED & TICK) =================
+        // Fixed timer logic: 15-min Shubh game never shows >15 min countdown; shows clear gap/next-slot info cleanly
         function startRealTimeSystem() {
+            let lastSoundSecond = -1;
             setInterval(() => {
                 checkAndPerform1AMDailyReset();
+                checkAndTriggerAutoResults();
+                updateLiveSpotlightBanner();
+                if (!document.getElementById('amar-duniya-section').classList.contains('hidden')) {
+                    renderAmarMarketsGrid();
+                }
+
                 let now = getIndiaNow();
                 let currentMins = now.getHours() * 60 + now.getMinutes();
                 let secs = now.getSeconds();
-                let activeInfo = getCurrentActiveSlotObject();
-                let slot = activeInfo.slot;
-                let endMins = timeStrToMins(slot.end);
-                let totalSecRemaining = Math.max(0, (endMins - currentMins) * 60 - secs);
-                let minsLeftToEnd = endMins - currentMins;
+                let endOfDayMins = timeStrToMins("08:00 PM");
 
-                if (currentMins >= timeStrToMins("08:00 PM")) {
-                    document.getElementById('countdown').innerText = "CLOSED";
-                    document.getElementById('admin-countdown').innerText = "CLOSED";
-                    document.getElementById('timer-status-hint').innerText = "🌙 आज का खेल समाप्त (सुबह 09:15 AM को पुनः शुरू होगा)";
-                } else {
-                    let displayMins = Math.floor(totalSecRemaining / 60);
-                    let displaySecs = totalSecRemaining % 60;
-                    let timeStr = `${String(displayMins).padStart(2, '0')}:${String(displaySecs).padStart(2, '0')}`;
+                const timerEl = document.getElementById('countdown');
+                const adminTimerEl = document.getElementById('admin-countdown');
+                const statusHint = document.getElementById('timer-status-hint');
 
-                    const cdEl = document.getElementById('countdown');
-                    cdEl.innerText = timeStr;
-                    document.getElementById('admin-countdown').innerText = timeStr;
-
-                    // Lock 1 minute before slot end AND red timer + tick sound in final 1 minute (<= 60s)
-                    if (minsLeftToEnd <= 1 || totalSecRemaining <= 60) {
-                        cdEl.classList.add('red-lock');
-                        document.getElementById('timer-status-hint').innerText = `🔒 अंतिम 1 मिनट! बुकिंग लॉक (${slot.start} - ${slot.end})`;
-                        if (isGoodLuckMainScreenActive()) {
-                            playTickSound();
-                        }
-                    } else {
-                        cdEl.classList.remove('red-lock');
-                        document.getElementById('timer-status-hint').innerText = `सक्रिय स्लॉट: ${slot.start} - ${slot.end} (लॉक: 1 मि. पहले)`;
-                    }
+                if (currentMins >= endOfDayMins) {
+                    if (timerEl) { timerEl.innerText = "00:00"; timerEl.classList.remove('red-lock'); }
+                    if (adminTimerEl) adminTimerEl.innerText = "00:00";
+                    if (statusHint) statusHint.innerText = "🌙 आज का खेल समाप्त (रात 8:00 बजे बंद) - Good Night!";
+                    return;
                 }
 
-                updateLiveSpotlightBanner();
-                if (secs === 0) checkAndTriggerAutoResults();
-                if (secs % 15 === 0) renderAmarMarketsGrid();
+                let activeInfo = getCurrentActiveSlotObject();
+                let slot = activeInfo.slot;
+                let startMins = timeStrToMins(slot.start);
+                let endMins = timeStrToMins(slot.end);
+                let maxWindowSecs = (currentType === 'shubh') ? (15 * 60) : (30 * 60);
+
+                let isBeforeSlotStart = (currentType === 'shubh') && (currentMins < startMins);
+                let totalSecRemaining;
+                let minsLeftToEnd;
+
+                if (isBeforeSlotStart) {
+                    // In gap before next 15-min slot: show time until slot opens (max 15:00) so user isn't misled by a 22-30 min timer
+                    let minsToStart = Math.max(0, startMins - currentMins);
+                    totalSecRemaining = Math.min(maxWindowSecs, Math.max(0, minsToStart * 60 - secs));
+                    minsLeftToEnd = minsToStart;
+                } else {
+                    let rawSecLeft = Math.max(0, (endMins - currentMins) * 60 - secs);
+                    totalSecRemaining = Math.min(maxWindowSecs, rawSecLeft);
+                    minsLeftToEnd = Math.floor(totalSecRemaining / 60);
+                }
+
+                let dMins = Math.floor(totalSecRemaining / 60);
+                let dSecs = totalSecRemaining % 60;
+                let timeString = `${String(dMins).padStart(2, '0')}:${String(dSecs).padStart(2, '0')}`;
+
+                if (timerEl) timerEl.innerText = timeString;
+                if (adminTimerEl) adminTimerEl.innerText = timeString;
+
+                let slotLabel = `${currentType === 'shubh' ? 'शुभ लक्ष्मी (15 मि.)' : 'धन लक्ष्मी (30 मि.)'}`;
+                if (!isBeforeSlotStart && minsLeftToEnd < 1) {
+                    if (timerEl) timerEl.classList.add('red-lock');
+                    if (statusHint) statusHint.innerText = `⚠️ ${slotLabel} • स्लॉट ${slot.start} - ${slot.end}: बुकिंग लॉक (परिणाम आने वाला है!)`;
+                    if (isGoodLuckMainScreenActive() && totalSecRemaining > 0 && lastSoundSecond !== totalSecRemaining) {
+                        lastSoundSecond = totalSecRemaining;
+                        playTickSound();
+                    }
+                } else {
+                    if (timerEl) timerEl.classList.remove('red-lock');
+                    lastSoundSecond = -1;
+                    if (statusHint) {
+                        statusHint.innerText = isBeforeSlotStart
+                            ? `⏳ ${slotLabel} • अगला स्लॉट ${slot.start} - ${slot.end} शुरू होने में`
+                            : `सक्रिय स्लॉट (${slotLabel}): ${slot.start} - ${slot.end}`;
+                    }
+                }
             }, 1000);
         }
 
-        function openDeposit() {
-            document.getElementById('deposit-modal').classList.remove('hidden');
-            loadDepositQRUI();
-            renderUserTransactionHistory();
-            qrTimeRemaining = 300;
-            clearInterval(qrTimerInterval);
-            qrTimerInterval = setInterval(() => {
-                if (qrTimeRemaining > 0) {
-                    qrTimeRemaining--;
-                    let m = Math.floor(qrTimeRemaining / 60); let s = qrTimeRemaining % 60;
-                    document.getElementById('qr-timer').innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-                } else { qrTimeRemaining = 300; }
-            }, 1000);
+        function checkAndPayoutWinners(type, slotIndex, finalResultStr) {
+            let parts = finalResultStr.split('-');
+            let openPatti = parts[0];
+            let jodi = parts[1];
+            let closePatti = parts[2];
+
+            let openDigit = openPatti.split('').reduce((a,b)=>Number(a)+Number(b),0) % 10;
+            let closeDigit = closePatti.split('').reduce((a,b)=>Number(a)+Number(b),0) % 10;
+
+            let slotObj = type === 'shubh' ? shubhSlotData[slotIndex] : dhanSlotData[slotIndex];
+            let slotTimeStr = `${slotObj.start} - ${slotObj.end}`;
+            let betsList = type === 'shubh' ? shubhBets : dhanBets;
+            let lotteryName = type === 'shubh' ? 'शुभ लक्ष्मी' : 'धन लक्ष्मी';
+
+            betsList.forEach(bet => {
+                if (bet.slotTime === slotTimeStr && !bet.paidOut) {
+                    let wonPoints = 0;
+                    if (bet.gameMode === 'Single Digit') {
+                        if ((bet.gameType === 'OPEN' && Number(bet.number) === openDigit) || (bet.gameType === 'CLOSE' && Number(bet.number) === closeDigit)) {
+                            wonPoints = bet.points * 10;
+                        }
+                    } else if (bet.gameMode === 'Jodi Digit') {
+                        if (bet.number === jodi) wonPoints = bet.points * 100;
+                    } else if (bet.gameMode === 'Single Pana') {
+                        if ((bet.gameType === 'OPEN' && bet.number === openPatti) || (bet.gameType === 'CLOSE' && bet.number === closePatti)) {
+                            wonPoints = bet.points * 150;
+                        }
+                    } else if (bet.gameMode === 'Double Pana') {
+                        if ((bet.gameType === 'OPEN' && bet.number === openPatti) || (bet.gameType === 'CLOSE' && bet.number === closePatti)) {
+                            wonPoints = bet.points * 300;
+                        }
+                    } else if (bet.gameMode === 'Triple Pana') {
+                        if ((bet.gameType === 'OPEN' && bet.number === openPatti) || (bet.gameType === 'CLOSE' && bet.number === closePatti)) {
+                            wonPoints = bet.points * 700;
+                        }
+                    }
+
+                    if (wonPoints > 0) {
+                        bet.paidOut = true;
+                        bet.wonPoints = wonPoints;
+                        markBetAndParchiWonInHistory(bet.user, bet.id, null, null, wonPoints);
+                        creditUserWinPoints(bet.user, wonPoints);
+                    }
+                }
+            });
+
+            if (type === 'shubh') db.ref('shubhBets').set(shubhBets);
+            else db.ref('dhanBets').set(dhanBets);
         }
 
-        function closeDeposit() { document.getElementById('deposit-modal').classList.add('hidden'); clearInterval(qrTimerInterval); }
-
-        function submitDeposit() {
-            const amt = parseInt(document.getElementById('dep-amount').value);
-            const utr = document.getElementById('utr-input').value.trim();
-            if (isNaN(amt) || amt < 99) { alert('⚠️ न्यूनतम डिपॉजिट राशि ₹99 है!'); return; }
-            if (utr.length !== 12) { alert('कृपया सही 12-अंकों का UTR नंबर दर्ज करें!'); return; }
-            let newReq = { id: Date.now(), user: activeUserPhone, amount: amt, utr: utr, status: 'pending', time: getIndiaNow().toLocaleString('en-IN') };
-            depositRequests.unshift(newReq);
-            db.ref('depositRequests').set(depositRequests);
-            alert('✅ डिपॉजिट अनुरोध भेजा गया! अप्रूव होते ही बैलेंस व ₹20 लॉक्ड बोनस वॉलेट में जुड़ जाएंगे।');
-            document.getElementById('utr-input').value = '';
-            closeDeposit();
-        }
-
-        function openWithdraw() {
-            let now = getIndiaNow();
-            let curMins = now.getHours() * 60 + now.getMinutes();
-            if (curMins < 600 || curMins > 1080) {
-                alert('⚠️ विड्रॉल का समय सुबह 10:00 बजे से शाम 6:00 बजे तक है!');
-                return;
-            }
-            document.getElementById('withdraw-modal').classList.remove('hidden');
-        }
-
-        function closeWithdraw() { document.getElementById('withdraw-modal').classList.add('hidden'); }
-
-        function toggleWithdrawFields() {
-            const m = document.getElementById('withdraw-method').value;
-            document.getElementById('upi-withdraw-field').classList.toggle('hidden', m !== 'upi');
-            document.getElementById('bank-withdraw-field').classList.toggle('hidden', m !== 'bank');
-        }
-
-        function submitWithdraw() {
-            const amt = parseInt(document.getElementById('withdraw-amount').value);
-            if (isNaN(amt) || amt < 300) { alert('⚠️ न्यूनतम विड्रॉल राशि ₹300 है!'); return; }
-            if (amt > currentWallet) { alert('पर्याप्त पॉइंट्स नहीं हैं!'); return; }
-            currentWallet -= amt;
-            userWallets[activeUserPhone] = currentWallet;
-            db.ref('userWallets/' + activeUserPhone).set(currentWallet);
-            let newReq = { id: Date.now(), user: activeUserPhone, amount: amt, method: document.getElementById('withdraw-method').value, status: 'pending', time: getIndiaNow().toLocaleString('en-IN') };
-            withdrawRequests.unshift(newReq);
-            db.ref('withdrawRequests').set(withdrawRequests);
-            updateWalletUI();
-            alert('✅ विड्रॉल अनुरोध भेजा गया!');
-            closeWithdraw();
-        }
-
-        function openRates() { document.getElementById('rates-modal').classList.remove('hidden'); }
-        function closeRates() { document.getElementById('rates-modal').classList.add('hidden'); }
-        function openProfile() { document.getElementById('profile-modal').classList.remove('hidden'); }
-        function closeProfile() { document.getElementById('profile-modal').classList.add('hidden'); }
-
+        // ================= ADMIN PANEL =================
         function openAdmin() {
-            if (!activeUserPhone || !usersDB[activeUserPhone] || !usersDB[activeUserPhone].isSuperAdmin) {
-                alert('⚠️ केवल अधिकृत एडमिन ही यह पैनल खोल सकता है!');
-                return;
-            }
-            loggedInAdminId = activeUserPhone;
             document.getElementById('main-section').classList.add('hidden');
-            document.getElementById('amar-duniya-section').classList.add('hidden');
-            document.getElementById('amar-admin-section').classList.add('hidden');
             document.getElementById('admin-section').classList.remove('hidden');
+            populateAdminSlots();
             switchAdminTab('res');
+            updateAutoToggleUI();
         }
 
         function closeAdmin() {
             document.getElementById('admin-section').classList.add('hidden');
             document.getElementById('main-section').classList.remove('hidden');
-            renderResults();
+            switchLottery(currentType);
         }
 
-        function switchAdminTab(tabName) {
+        function switchAdminTab(tab) {
             ['res', 'users', 'qr', 'bids', 'dep', 'wit', 'req'].forEach(t => {
                 document.getElementById(`adm-sec-${t}`).classList.add('hidden');
                 document.getElementById(`adm-tab-${t}`).classList.remove('active');
             });
-            document.getElementById(`adm-sec-${tabName}`).classList.remove('hidden');
-            document.getElementById(`adm-tab-${tabName}`).classList.add('active');
+            document.getElementById(`adm-sec-${tab}`).classList.remove('hidden');
+            document.getElementById(`adm-tab-${tab}`).classList.add('active');
 
-            if (tabName === 'res') populateAdminSlots();
-            if (tabName === 'users') renderAdminUsersList();
-            if (tabName === 'qr') loadCurrentQRSettings();
-            if (tabName === 'bids') initBidFilterOptions();
-            if (tabName === 'dep' || tabName === 'wit') renderAdminLists();
-            if (tabName === 'req') renderAdminHelpRequests();
-        }
-
-        function toggleAutoRandomSystem() {
-            isAutoRandomActive = !isAutoRandomActive;
-            db.ref('isAutoRandomActive').set(isAutoRandomActive);
-            updateAutoToggleUI();
-        }
-
-        function updateAutoToggleUI() {
-            const btn = document.getElementById('auto-toggle-btn');
-            const desc = document.getElementById('auto-status-desc');
-            if (isAutoRandomActive) {
-                btn.innerText = "🛑 STOP AUTO"; btn.style.background = "#ff4444";
-                desc.innerText = "स्टेटस: चालू (मालिक 20% सुरक्षित • एडमिन लॉक का सम्मान)";
-            } else {
-                btn.innerText = "▶️ START AUTO"; btn.style.background = "#28a745";
-                desc.innerText = "स्टेटस: रुका हुआ (पूरी तरह एडमिन नियंत्रण में)";
-            }
-        }
-
-        function populateAdminSlots() {
-            const gType = document.getElementById('admin-game-selector').value;
-            const slotSel = document.getElementById('admin-slot-index');
-            slotSel.innerHTML = '';
-            let arr = gType === 'shubh' ? shubhSlotData : dhanSlotData;
-            let activeInfo = getCurrentActiveSlotObject(gType);
-
-            arr.forEach((s, idx) => {
-                if (s.type !== 'lunch') {
-                    let isCur = (idx === activeInfo.index);
-                    let lockTag = s.adminLocked ? " 🔒[Admin Locked]" : "";
-                    slotSel.innerHTML += `<option value="${idx}" ${isCur ? 'selected' : ''}>${isCur ? '⭐ [चालू स्लॉट] ' : ''}${s.start} - ${s.end}${lockTag}</option>`;
-                }
-            });
-            updateAdminSlotInfo();
-        }
-
-        function updateAdminSlotInfo() {
-            const gType = document.getElementById('admin-game-selector').value;
-            const idx = parseInt(document.getElementById('admin-slot-index').value);
-            let arr = gType === 'shubh' ? shubhSlotData : dhanSlotData;
-            let s = arr[idx];
-            if (s) {
-                document.getElementById('admin-current-slot-time-hint').innerText = `चयनित स्लॉट समय: ${s.start} से ${s.end} तक (${s.adminLocked ? 'एडमिन लॉक सक्रिय' : 'ऑटो/एडमिन'})`;
-            }
-        }
-
-        function saveAdminOpen() {
-            const gType = document.getElementById('admin-game-selector').value;
-            const idx = parseInt(document.getElementById('admin-slot-index').value);
-            let opP = document.getElementById('admin-open-patti').value.trim();
-            let opD = document.getElementById('admin-open-digit').value.trim();
-            if (!opP || !opD) { alert('ओपन पत्ती और अंक दोनों दर्ज करें!'); return; }
-            let openCombo = `${opP}-${opD}`;
-            let targetArr = gType === 'shubh' ? shubhSlotData : dhanSlotData;
-            targetArr[idx].openData = openCombo;
-            targetArr[idx].preSetOpen = openCombo;
-            targetArr[idx].adminLocked = true;
-            targetArr[idx].stage = "open_declared";
-            targetArr[idx].openDeclaredAt = Date.now();
-            targetArr[idx].display = `<span class='open-pill-glow'>OPEN</span> <span class='unique-result-badge'>${openCombo}</span>`;
-            if (gType === 'shubh') db.ref('shubhSlots').set(shubhSlotData);
-            else db.ref('dhanSlots').set(dhanSlotData);
-            recordIntoWeeklyGameChat(gType, `${targetArr[idx].start} OPEN: ${openCombo}`);
-            alert(`✅ ओपन (${openCombo}) सेव और लॉक हो गया! अब कोई ऑटो रैंडम इसे नहीं बदलेगा।`);
-        }
-
-        function updateAdminResult() {
-            const gType = document.getElementById('admin-game-selector').value;
-            const idx = parseInt(document.getElementById('admin-slot-index').value);
-            let opP = document.getElementById('admin-open-patti').value.trim();
-            let opD = document.getElementById('admin-open-digit').value.trim();
-            let clP = document.getElementById('admin-close-patti').value.trim();
-            let clD = document.getElementById('admin-close-digit').value.trim();
-
-            if (!opP || !opD || !clP || !clD) { alert('कृपया ओपन और क्लोज दोनों की पत्ती व अंक दर्ज करें!'); return; }
-
-            let jodi = `${opD}${clD}`;
-            let finalResStr = `${opP}-${jodi}-${clP}`;
-
-            let targetArr = gType === 'shubh' ? shubhSlotData : dhanSlotData;
-            targetArr[idx].preSetOpen = `${opP}-${opD}`;
-            targetArr[idx].preSetClose = clP;
-            targetArr[idx].preSetJodi = jodi;
-            targetArr[idx].adminLocked = true;
-            targetArr[idx].display = `<span class='unique-result-badge'>${finalResStr}</span>`;
-            targetArr[idx].stage = "closed_declared";
-            targetArr[idx].closedDeclaredAt = Date.now();
-
-            if (gType === 'shubh') db.ref('shubhSlots').set(shubhSlotData);
-            else db.ref('dhanSlots').set(dhanSlotData);
-
-            recordIntoWeeklyGameChat(gType, `${targetArr[idx].start}-${targetArr[idx].end} FINAL: ${finalResStr}`);
-            checkAndPayoutWinners(gType, idx, finalResStr);
-            alert(`✅ जोड़ी (${jodi}) के साथ पूरा परिणाम (${finalResStr}) लाइव और लॉक हो गया!`);
-        }
-
-        function enableAdminEditMode() {
-            const gType = document.getElementById('admin-game-selector').value;
-            const idx = parseInt(document.getElementById('admin-slot-index').value);
-            let targetArr = gType === 'shubh' ? shubhSlotData : dhanSlotData;
-            let newRes = prompt(`स्लॉट (${targetArr[idx].start}) का नया रिजल्ट दर्ज करें (उदा. 118-05-122):`, (targetArr[idx].display || "").replace(/<[^>]*>/g, '').trim());
-            if (newRes && newRes.trim() !== "") {
-                let clean = newRes.trim();
-                targetArr[idx].display = `<span class='unique-result-badge'>${clean}</span>`;
-                targetArr[idx].stage = "closed_declared";
-                targetArr[idx].adminLocked = true;
-                if (gType === 'shubh') db.ref('shubhSlots').set(shubhSlotData);
-                else db.ref('dhanSlots').set(dhanSlotData);
-                recordIntoWeeklyGameChat(gType, `${targetArr[idx].start} EDIT: ${clean}`);
-                alert('✅ पुराना रिजल्ट एडिट हो गया!');
-            }
-        }
-
-        function checkAndPayoutWinners(gType, slotIdx, fullResultStr) {
-            let parts = fullResultStr.split('-');
-            if (parts.length < 3) return;
-            let opPatti = parts[0]; let jodi = parts[1]; let clPatti = parts[2];
-            let opDigit = jodi.charAt(0); let clDigit = jodi.charAt(1);
-            let targetArr = gType === 'shubh' ? shubhSlotData : dhanSlotData;
-            let slotTimeStr = `${targetArr[slotIdx].start} - ${targetArr[slotIdx].end}`;
-            let betsList = gType === 'shubh' ? shubhBets : dhanBets;
-            let winnersCount = 0;
-
-            betsList.forEach(b => {
-                if (b.slotTime === slotTimeStr && !b.paidOut) {
-                    let mult = 0;
-                    if (b.gameMode === 'Single Digit') {
-                        if (b.gameType === 'OPEN' && b.number === opDigit) mult = 10;
-                        if (b.gameType === 'CLOSE' && b.number === clDigit) mult = 10;
-                    } else if (b.gameMode === 'Jodi Digit') {
-                        if (b.number === jodi) mult = 100;
-                    } else if (b.gameMode === 'Single Pana') {
-                        if ((b.gameType === 'OPEN' && b.number === opPatti) || (b.gameType === 'CLOSE' && b.number === clPatti)) mult = 150;
-                    } else if (b.gameMode === 'Double Pana') {
-                        if ((b.gameType === 'OPEN' && b.number === opPatti) || (b.gameType === 'CLOSE' && b.number === clPatti)) mult = 300;
-                    } else if (b.gameMode === 'Triple Pana') {
-                        if ((b.gameType === 'OPEN' && b.number === opPatti) || (b.gameType === 'CLOSE' && b.number === clPatti)) mult = 700;
-                    }
-                    if (mult > 0) {
-                        b.paidOut = true;
-                        winnersCount++;
-                        let winPts = b.points * mult;
-                        creditUserWinPoints(b.user, winPts);
-                    }
-                }
-            });
-            if (gType === 'shubh') db.ref('shubhBets').set(shubhBets);
-            else db.ref('dhanBets').set(dhanBets);
-            if (winnersCount > 0) alert(`🎉 बधाई हो! इस ड्रॉ में ${winnersCount} विजेता निकले!`);
+            if (tab === 'users') renderAdminUsersList();
+            if (tab === 'qr') loadCurrentQRSettings();
+            if (tab === 'bids') { populateBidSlotFilter(); renderBidsTable(); }
+            if (tab === 'dep' || tab === 'wit') renderAdminLists();
+            if (tab === 'req') renderAdminHelpRequests();
         }
 
         function renderAdminUsersList() {
             const box = document.getElementById('admin-users-list');
             box.innerHTML = '';
             Object.keys(usersDB).forEach(mob => {
+                if (usersDB[mob].isSuperAdmin) return;
                 let u = usersDB[mob];
-                let isLock = u.isLocked;
+                let bal = userWallets[mob] || 0;
+                let lBonus = userLockedBonuses[mob] || 0;
                 box.innerHTML += `
                     <div class="req-card">
-                        <b>नाम:</b> ${u.name || '-'} | <b>मोबाइल:</b> ${mob}<br>
-                        <b>स्टेटस:</b> ${isLock ? '<span style="color:#ff4444">🔒 लॉक</span>' : '<span style="color:#4caf50">✅ सक्रिय</span>'}<br>
-                        <div style="display:flex; gap:6px; margin-top:6px;">
-                            <button type="button" class="btn" style="margin:0; padding:6px; font-size:0.78rem; background:${isLock ? '#28a745' : '#ff9800'}; color:#fff;" onclick="toggleUserLock('${mob}')">${isLock ? '🔓 अनलॉक करें' : '🔒 लॉक करें'}</button>
-                            ${mob !== "05032019" ? `<button type="button" class="btn" style="margin:0; padding:6px; font-size:0.78rem; background:#dc2626; color:#fff;" onclick="deleteUserAccount('${mob}')">🗑️ हटाएं</button>` : ''}
+                        <b>नाम:</b> ${u.name} | <b>मोबाइल:</b> ${mob}<br>
+                        <b>पॉइंट्स:</b> ${bal} | <b>लॉक्ड बोनस:</b> ${lBonus} | <b>स्टेटस:</b> ${u.isLocked ? '🔒 Locked' : '✅ Active'}<br>
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <button type="button" class="btn" style="margin:0; padding:5px 10px; font-size:0.75rem; background:#ff9800; color:#000; width:auto;" onclick="toggleUserLock('${mob}')">${u.isLocked ? '🔓 Unlock' : '🔒 Lock'}</button>
+                            <button type="button" class="btn" style="margin:0; padding:5px 10px; font-size:0.75rem; background:#ff4444; color:#fff; width:auto;" onclick="deleteUserAccount('${mob}')">🗑️ Delete</button>
                         </div>
                     </div>
                 `;
@@ -4390,203 +4203,547 @@
         }
 
         function deleteUserAccount(mob) {
-            if (!confirm(`क्या आप वाकई यूज़र ${mob} को हटाना चाहते हैं?`)) return;
-            delete usersDB[mob];
-            db.ref('usersDB').set(usersDB);
-            renderAdminUsersList();
+            if (confirm(`क्या आप वाकई मोबाइल नंबर ${mob} का अकाउंट डिलीट करना चाहते हैं?`)) {
+                delete usersDB[mob];
+                db.ref('usersDB').set(usersDB);
+                db.ref('userWallets/' + mob).remove();
+                db.ref('userLockedBonuses/' + mob).remove();
+                renderAdminUsersList();
+            }
+        }
+
+        function toggleAutoRandomSystem() {
+            isAutoRandomActive = !isAutoRandomActive;
+            db.ref('isAutoRandomActive').set(isAutoRandomActive);
+            updateAutoToggleUI();
+        }
+
+        function updateAutoToggleUI() {
+            const btn = document.getElementById('auto-toggle-btn');
+            const desc = document.getElementById('auto-status-desc');
+            if (!btn || !desc) return;
+            if (isAutoRandomActive) {
+                btn.innerText = "🛑 STOP AUTO";
+                btn.style.background = "#ff4444";
+                desc.innerText = "स्टेटस: चालू (मालिक 20% सुरक्षित • एडमिन लॉक का सम्मान)";
+            } else {
+                btn.innerText = "▶️ START AUTO";
+                btn.style.background = "#28a745";
+                desc.innerText = "स्टेटस: बंद (ऑटो रैंडम रुका हुआ है)";
+            }
+        }
+
+        function populateAdminSlots() {
+            const gameType = document.getElementById('admin-game-selector').value;
+            const slotSelect = document.getElementById('admin-slot-index');
+            slotSelect.innerHTML = '';
+            let list = gameType === 'shubh' ? shubhSlotData : dhanSlotData;
+            list.forEach((s, idx) => {
+                if (s.type === 'lunch') return;
+                let opt = document.createElement('option');
+                opt.value = idx;
+                opt.innerText = `स्लॉट ${idx + 1}: ${s.start} से ${s.end}`;
+                slotSelect.appendChild(opt);
+            });
+            updateAdminSlotInfo();
+        }
+
+        function updateAdminSlotInfo() {
+            const gameType = document.getElementById('admin-game-selector').value;
+            const idx = parseInt(document.getElementById('admin-slot-index').value);
+            let list = gameType === 'shubh' ? shubhSlotData : dhanSlotData;
+            let s = list[idx];
+            if (s) document.getElementById('admin-current-slot-time-hint').innerText = `चयनित स्लॉट समय: ${s.start} से ${s.end}`;
+        }
+
+        function saveAdminOpen() {
+            const gameType = document.getElementById('admin-game-selector').value;
+            const idx = parseInt(document.getElementById('admin-slot-index').value);
+            const opPatti = document.getElementById('admin-open-patti').value.trim();
+            const opDigit = document.getElementById('admin-open-digit').value.trim();
+            if (!opPatti || !opDigit) { alert('कृपया ओपन पत्ती और ओपन अंक दर्ज करें!'); return; }
+
+            let list = gameType === 'shubh' ? shubhSlotData : dhanSlotData;
+            let openStr = `${opPatti}-${opDigit}`;
+            list[idx].openData = openStr;
+            list[idx].display = `<span class='open-pill-glow'>OPEN</span> <span class='unique-result-badge'>${openStr}</span>`;
+            list[idx].stage = "open_declared";
+            list[idx].openDeclaredAt = Date.now();
+            list[idx].adminLocked = true;
+
+            if (gameType === 'shubh') db.ref('shubhSlots').set(shubhSlotData);
+            else db.ref('dhanSlots').set(dhanSlotData);
+
+            recordIntoWeeklyGameChat(gameType, `${list[idx].start} OPEN: ${openStr}`);
+            alert(`✅ ओपन (${openStr}) सेव हो गया और लॉक हो गया!`);
+            updateLiveSpotlightBanner();
+        }
+
+        function updateAdminResult() {
+            const gameType = document.getElementById('admin-game-selector').value;
+            const idx = parseInt(document.getElementById('admin-slot-index').value);
+            const opPatti = document.getElementById('admin-open-patti').value.trim();
+            const opDigit = document.getElementById('admin-open-digit').value.trim();
+            const clPatti = document.getElementById('admin-close-patti').value.trim();
+            const clDigit = document.getElementById('admin-close-digit').value.trim();
+
+            if (!opPatti || !opDigit || !clPatti || !clDigit) { alert('कृपया ओपन और क्लोज दोनों की पत्ती व अंक दर्ज करें!'); return; }
+            let jodi = `${opDigit}${clDigit}`;
+            let finalRes = `${opPatti}-${jodi}-${clPatti}`;
+
+            let list = gameType === 'shubh' ? shubhSlotData : dhanSlotData;
+            list[idx].display = `<span class='unique-result-badge'>${finalRes}</span>`;
+            list[idx].stage = "closed_declared";
+            list[idx].closedDeclaredAt = Date.now();
+            list[idx].adminLocked = true;
+
+            if (gameType === 'shubh') db.ref('shubhSlots').set(shubhSlotData);
+            else db.ref('dhanSlots').set(dhanSlotData);
+
+            recordIntoWeeklyGameChat(gameType, `${list[idx].start}-${list[idx].end} FINAL: ${finalRes}`);
+            checkAndPayoutWinners(gameType, idx, finalRes);
+            updateLiveSpotlightBanner();
+            alert(`🚀 जोड़ी (${jodi}) व पूरा रिजल्ट (${finalRes}) लाइव पब्लिश हो गया!`);
+        }
+
+        function enableAdminEditMode() {
+            const gameType = document.getElementById('admin-game-selector').value;
+            const idx = parseInt(document.getElementById('admin-slot-index').value);
+            let list = gameType === 'shubh' ? shubhSlotData : dhanSlotData;
+            let currentDisp = (list[idx].display || "").replace(/<[^>]*>/g, '').trim();
+            let editedText = prompt("नया रिजल्ट टेक्स्ट दर्ज करें (जैसे 118-05-122):", currentDisp);
+            if (editedText !== null && editedText.trim() !== "") {
+                list[idx].display = `<span class='unique-result-badge'>${editedText.trim()}</span>`;
+                list[idx].stage = "closed_declared";
+                list[idx].closedDeclaredAt = Date.now();
+                list[idx].adminLocked = true;
+                if (gameType === 'shubh') db.ref('shubhSlots').set(shubhSlotData);
+                else db.ref('dhanSlots').set(dhanSlotData);
+                recordIntoWeeklyGameChat(gameType, `${list[idx].start} EDITED: ${editedText.trim()}`);
+                updateLiveSpotlightBanner();
+                alert('✅ रिजल्ट अपडेट हो गया!');
+            }
+        }
+
+        function switchBidFilter(type) {
+            currentBidFilter = type;
+            document.getElementById('bid-sub-shubh').style.background = type === 'shubh' ? '' : '#444';
+            document.getElementById('bid-sub-shubh').style.color = type === 'shubh' ? '#000' : '#fff';
+            document.getElementById('bid-sub-dhan').style.background = type === 'dhan' ? '' : '#444';
+            document.getElementById('bid-sub-dhan').style.color = type === 'dhan' ? '#000' : '#fff';
+            populateBidSlotFilter();
+            renderBidsTable();
+        }
+
+        function populateBidSlotFilter() {
+            const sel = document.getElementById('admin-bid-slot-filter');
+            sel.innerHTML = `<option value="ALL">सभी समय स्लॉट (All Slots)</option>`;
+            let slotList = currentBidFilter === 'shubh' ? shubhSlotData : dhanSlotData;
+            slotList.forEach(s => {
+                if (s.type === 'lunch') return;
+                let sStr = `${s.start} - ${s.end}`;
+                sel.innerHTML += `<option value="${sStr}">${sStr}</option>`;
+            });
+        }
+
+        function renderBidsTable() {
+            const tbody = document.getElementById('admin-bids-tbody');
+            const oldTbody = document.getElementById('admin-old-bids-tbody');
+            tbody.innerHTML = '';
+            if (oldTbody) oldTbody.innerHTML = '';
+
+            let selectedSlot = document.getElementById('admin-bid-slot-filter').value;
+            let betsList = currentBidFilter === 'shubh' ? shubhBets : dhanBets;
+            let todayKey = getTodayDateKey();
+
+            let todayFiltered = betsList.filter(b => {
+                let bDate = b.dateKey || todayKey;
+                let slotMatch = (selectedSlot === "ALL") || (b.slotTime === selectedSlot);
+                return (bDate === todayKey) && slotMatch;
+            });
+
+            let oldFiltered = betsList.filter(b => {
+                let bDate = b.dateKey || todayKey;
+                let slotMatch = (selectedSlot === "ALL") || (b.slotTime === selectedSlot);
+                return (bDate !== todayKey) && slotMatch;
+            });
+
+            if (todayFiltered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="color:#aaa;">इस स्लॉट में आज कोई दांव नहीं लगा है।</td></tr>`;
+            } else {
+                todayFiltered.forEach(b => {
+                    tbody.innerHTML += `<tr><td><b>${b.user}</b><br><span style="font-size:0.75rem; color:var(--accent)">${b.fullKey}</span></td><td>${b.slotTime}<br><span style="font-size:0.7rem; color:#7ef9ff">${b.mobileTime || ''}</span></td><td style="color:var(--accent); font-weight:bold;">${b.points} Pts</td></tr>`;
+                });
+            }
+
+            if (oldTbody) {
+                if (oldFiltered.length === 0) {
+                    oldTbody.innerHTML = `<tr><td colspan="3" style="color:#777;">पुराने दिनों का कोई दांव उपलब्ध नहीं है।</td></tr>`;
+                } else {
+                    oldFiltered.forEach(b => {
+                        oldTbody.innerHTML += `<tr><td><b>${b.dateKey || 'पुराना'}</b> (${b.user})<br><span style="font-size:0.72rem; color:#aaa">${b.fullKey}</span></td><td>${b.slotTime}</td><td style="color:#ccc;">${b.points} Pts</td></tr>`;
+                    });
+                }
+            }
         }
 
         function loadCurrentQRSettings() {
             if (!qrSettings) return;
             document.getElementById('admin-active-qr-select').value = qrSettings.activeKey || "qr1";
-            document.getElementById('admin-upi1-input').value = (qrSettings.qr1 && qrSettings.qr1.upi) || "";
-            document.getElementById('admin-qr1-url-input').value = (qrSettings.qr1 && qrSettings.qr1.imageSrc && !qrSettings.qr1.imageSrc.startsWith("data:")) ? qrSettings.qr1.imageSrc : "";
-            document.getElementById('admin-upi2-input').value = (qrSettings.qr2 && qrSettings.qr2.upi) || "";
-            document.getElementById('admin-qr2-url-input').value = (qrSettings.qr2 && qrSettings.qr2.imageSrc && !qrSettings.qr2.imageSrc.startsWith("data:")) ? qrSettings.qr2.imageSrc : "";
+            if (qrSettings.qr1) {
+                document.getElementById('admin-upi1-input').value = qrSettings.qr1.upi || "";
+                document.getElementById('admin-qr1-url-input').value = (qrSettings.qr1.imageSrc && !qrSettings.qr1.imageSrc.startsWith('data:')) ? qrSettings.qr1.imageSrc : "";
+            }
+            if (qrSettings.qr2) {
+                document.getElementById('admin-upi2-input').value = qrSettings.qr2.upi || "";
+                document.getElementById('admin-qr2-url-input').value = (qrSettings.qr2.imageSrc && !qrSettings.qr2.imageSrc.startsWith('data:')) ? qrSettings.qr2.imageSrc : "";
+            }
         }
 
         function switchAdminActiveQR() {
             qrSettings.activeKey = document.getElementById('admin-active-qr-select').value;
             db.ref('qrSettings').set(qrSettings);
-            alert('✅ सक्रिय QR / UPI स्विच हो गया!');
+            alert('✅ सक्रिय QR/UPI विकल्प बदल दिया गया है!');
         }
 
-        function handleQRFileUpload(key, fileInput) {
-            const file = fileInput.files && fileInput.files[0];
+        function handleQRFileUpload(key, input) {
+            const file = input.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 if (!qrSettings[key]) qrSettings[key] = { upi: "", imageSrc: "" };
                 qrSettings[key].imageSrc = e.target.result;
-                alert('✅ QR इमेज फ़ाइल लोड हो गई! नीचे "सेव करें" दबाएं।');
+                db.ref('qrSettings').set(qrSettings);
+                alert(`✅ ${key === 'qr1' ? 'Option 1' : 'Option 2'} की QR फोटो सेव हो गई!`);
             };
             reader.readAsDataURL(file);
         }
 
         function saveAllQRSettings() {
-            let upi1 = document.getElementById('admin-upi1-input').value.trim();
+            let u1 = document.getElementById('admin-upi1-input').value.trim();
             let url1 = document.getElementById('admin-qr1-url-input').value.trim();
-            let upi2 = document.getElementById('admin-upi2-input').value.trim();
+            let u2 = document.getElementById('admin-upi2-input').value.trim();
             let url2 = document.getElementById('admin-qr2-url-input').value.trim();
 
             if (!qrSettings.qr1) qrSettings.qr1 = { upi: "", imageSrc: "" };
             if (!qrSettings.qr2) qrSettings.qr2 = { upi: "", imageSrc: "" };
-            if (upi1) qrSettings.qr1.upi = upi1;
+
+            if (u1) qrSettings.qr1.upi = u1;
             if (url1) qrSettings.qr1.imageSrc = url1;
-            if (upi2) qrSettings.qr2.upi = upi2;
+            if (u2) qrSettings.qr2.upi = u2;
             if (url2) qrSettings.qr2.imageSrc = url2;
             qrSettings.activeKey = document.getElementById('admin-active-qr-select').value;
 
             db.ref('qrSettings').set(qrSettings);
-            alert('✅ दोनों UPI ID व QR सेटिंग्स लाइव सेव हो गईं!');
+            alert('✅ दोनों UPI और QR सेटिंग्स सेव हो गई हैं!');
         }
 
         function loadDepositQRUI() {
             let activeKey = qrSettings.activeKey || "qr1";
-            let activeObj = qrSettings[activeKey] || { upi: "goodluck@paytm", imageSrc: "" };
-            document.getElementById('display-upi-id').innerText = activeObj.upi || "goodluck@paytm";
-            const box = document.getElementById('qr-display-box');
-            if (activeObj.imageSrc && activeObj.imageSrc.trim() !== "") {
-                box.innerHTML = `<img src="${activeObj.imageSrc}" alt="QR Code" style="width:100%; height:100%; object-fit:contain;">`;
+            let activeObj = qrSettings[activeKey] || qrSettings.qr1 || { upi: "goodluck@paytm", imageSrc: "" };
+            let upiToShow = activeObj.upi || "goodluck@paytm";
+            let qrImgSrc = activeObj.imageSrc || "";
+
+            document.getElementById('display-upi-id').innerText = upiToShow;
+            const qrBox = document.getElementById('qr-display-box');
+            if (qrImgSrc) {
+                qrBox.innerHTML = `<img src="${qrImgSrc}" alt="QR Code" style="width:100%; height:100%; object-fit:contain; border-radius:7px;">`;
             } else {
-                box.innerHTML = `<span id="qr-placeholder-text" style="color:#000; font-weight:bold;">[ QR CODE ]</span>`;
+                qrBox.innerHTML = `<span id="qr-placeholder-text">[ QR CODE ]</span>`;
             }
         }
 
         function handleCopyAndPayApp() {
-            let upiText = document.getElementById('display-upi-id').innerText;
-            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(upiText).catch(()=>{});
-            const amt = document.getElementById('dep-amount').value || '99';
-            window.location.href = `upi://pay?pa=${encodeURIComponent(upiText)}&pn=GoodLuckLaxmi&am=${encodeURIComponent(amt)}&cu=INR`;
+            let activeKey = qrSettings.activeKey || "qr1";
+            let activeObj = qrSettings[activeKey] || qrSettings.qr1 || { upi: "goodluck@paytm" };
+            let upiId = activeObj.upi || "goodluck@paytm";
+            let amt = document.getElementById('dep-amount').value.trim() || "99";
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(upiId).catch(() => {});
+            }
+            let upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent("Good Luck Laxmi")}&am=${encodeURIComponent(amt)}&cu=INR`;
+            window.location.href = upiLink;
+            alert(`📋 UPI ID कॉपी हो गई: ${upiId}\nअब अपने PhonePe / GPay / Paytm ऐप से ₹${amt} भेजें और 12 अंकों का UTR नंबर यहाँ भरें।`);
         }
 
-        function initBidFilterOptions() {
-            const sel = document.getElementById('admin-bid-slot-filter');
-            sel.innerHTML = '<option value="ALL">सभी समय स्लॉट (All Slots)</option>';
-            let arr = currentBidFilter === 'shubh' ? shubhSlotData : dhanSlotData;
-            arr.forEach(s => { if (s.type !== 'lunch') sel.innerHTML += `<option value="${s.start} - ${s.end}">${s.start} - ${s.end}</option>`; });
-            renderBidsTable();
+        function openDeposit() {
+            document.getElementById('deposit-modal').classList.remove('hidden');
+            loadDepositQRUI();
+            renderUserTransactionHistory();
+            qrTimeRemaining = 300;
+            clearInterval(qrTimerInterval);
+            qrTimerInterval = setInterval(() => {
+                qrTimeRemaining--;
+                let mins = Math.floor(qrTimeRemaining / 60);
+                let secs = qrTimeRemaining % 60;
+                document.getElementById('qr-timer').innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                if (qrTimeRemaining <= 0) { clearInterval(qrTimerInterval); closeDeposit(); }
+            }, 1000);
         }
 
-        function switchBidFilter(filterType) {
-            currentBidFilter = filterType;
-            document.getElementById('bid-sub-shubh').style.background = filterType === 'shubh' ? 'var(--secondary)' : '#444';
-            document.getElementById('bid-sub-shubh').style.color = filterType === 'shubh' ? '#000' : '#fff';
-            document.getElementById('bid-sub-dhan').style.background = filterType === 'dhan' ? 'var(--secondary)' : '#444';
-            document.getElementById('bid-sub-dhan').style.color = filterType === 'dhan' ? '#000' : '#fff';
-            initBidFilterOptions();
+        function closeDeposit() { clearInterval(qrTimerInterval); document.getElementById('deposit-modal').classList.add('hidden'); }
+
+        function submitDeposit() {
+            const amount = parseInt(document.getElementById('dep-amount').value);
+            const utr = document.getElementById('utr-input').value.trim();
+            if (isNaN(amount) || amount < 99) { alert('⚠️ न्यूनतम डिपॉजिट राशि ₹99 है!'); return; }
+            if (utr.length !== 12) { alert('⚠️ कृपया सही 12-अंकों का UTR नंबर दर्ज करें!'); return; }
+
+            depositRequests.unshift({ id: Date.now(), user: activeUserPhone, amount: amount, utr: utr, status: 'pending', time: getIndiaNow().toLocaleString('en-IN') });
+            db.ref('depositRequests').set(depositRequests);
+            alert('डिपॉजिट अनुरोध भेज दिया गया है! एडमिन द्वारा अप्रूव होते ही बैलेंस व ₹20 लॉक्ड बोनस जुड़ जाएगा।');
+            document.getElementById('utr-input').value = '';
+            renderUserTransactionHistory();
         }
 
-        function renderBidsTable() {
-            const todayTbody = document.getElementById('admin-bids-tbody');
-            const oldTbody = document.getElementById('admin-old-bids-tbody');
-            todayTbody.innerHTML = ''; oldTbody.innerHTML = '';
-            let rawBets = currentBidFilter === 'shubh' ? shubhBets : dhanBets;
-            let selectedSlot = document.getElementById('admin-bid-slot-filter').value;
-            let todayKey = getTodayDateKey();
+        function openWithdraw() {
+            document.getElementById('withdraw-max-bal').innerText = currentWallet;
+            document.getElementById('withdraw-modal').classList.remove('hidden');
+        }
 
-            let todayBets = rawBets.filter(b => (b.dateKey || todayKey) === todayKey && (selectedSlot === "ALL" || b.slotTime === selectedSlot));
-            let oldBets = rawBets.filter(b => (b.dateKey || todayKey) !== todayKey && (selectedSlot === "ALL" || b.slotTime === selectedSlot));
+        function closeWithdraw() { document.getElementById('withdraw-modal').classList.add('hidden'); }
 
-            if (todayBets.length === 0) todayTbody.innerHTML = '<tr><td colspan="3" style="color:#aaa;">आज इस स्लॉट में कोई लाइव दांव नहीं लगा है।</td></tr>';
-            else todayBets.forEach(b => {
-                todayTbody.innerHTML += `<tr><td><b>${b.user}</b><br><span style="font-size:0.75rem; color:var(--accent);">${b.fullKey || b.number}</span></td><td style="font-size:0.75rem;">${b.mobileTime || ''}<br><span style="color:#aaa;">${b.slotTime}</span></td><td style="color:var(--accent); font-weight:bold;">₹${b.points}</td></tr>`;
-            });
+        function toggleWithdrawFields() {
+            const method = document.getElementById('withdraw-method').value;
+            if (method === 'upi') {
+                document.getElementById('upi-withdraw-field').classList.remove('hidden');
+                document.getElementById('bank-withdraw-field').classList.add('hidden');
+            } else {
+                document.getElementById('upi-withdraw-field').classList.add('hidden');
+                document.getElementById('bank-withdraw-field').classList.remove('hidden');
+            }
+        }
 
-            if (oldBets.length === 0) oldTbody.innerHTML = '<tr><td colspan="3" style="color:#777;">कोई पुराना दांव मौजूद नहीं है।</td></tr>';
-            else oldBets.forEach(b => {
-                oldTbody.innerHTML += `<tr><td style="color:#aaa; font-size:0.75rem;"><b>${b.dateKey}</b> (${b.user})<br>${b.fullKey || b.number}</td><td style="font-size:0.75rem; color:#aaa;">${b.mobileTime || ''}</td><td style="color:#ccc; font-weight:bold;">₹${b.points}</td></tr>`;
-            });
+        function submitWithdraw() {
+            let now = getIndiaNow();
+            let curMins = now.getHours() * 60 + now.getMinutes();
+            if (curMins < 600 || curMins > 1080) {
+                alert('⚠️ विड्रॉल केवल सुबह 10:00 से शाम 6:00 के बीच उपलब्ध है!');
+                return;
+            }
+            const amount = parseInt(document.getElementById('withdraw-amount').value);
+            if (isNaN(amount) || amount < 300) { alert('⚠️ न्यूनतम विड्रॉल राशि ₹300 है!'); return; }
+            if (amount > currentWallet) { alert('⚠️ आपके वॉलेट में पर्याप्त पॉइंट्स नहीं हैं!'); return; }
+
+            const method = document.getElementById('withdraw-method').value;
+            let details = "";
+            if (method === 'upi') {
+                let u = document.getElementById('withdraw-upi-id').value.trim();
+                if (!u) { alert('UPI ID दर्ज करें!'); return; }
+                details = `UPI: ${u}`;
+            } else {
+                let acc = document.getElementById('withdraw-acc-no').value.trim();
+                let ifsc = document.getElementById('withdraw-ifsc').value.trim();
+                let nm = document.getElementById('withdraw-name').value.trim();
+                if (!acc || !ifsc || !nm) { alert('बैंक की पूरी जानकारी दर्ज करें!'); return; }
+                details = `Bank: ${nm} | A/C: ${acc} | IFSC: ${ifsc}`;
+            }
+
+            currentWallet -= amount;
+            userWallets[activeUserPhone] = currentWallet;
+            db.ref('userWallets/' + activeUserPhone).set(currentWallet);
+            updateWalletUI();
+
+            withdrawRequests.unshift({ id: Date.now(), user: activeUserPhone, amount: amount, details: details, status: 'pending', time: getIndiaNow().toLocaleString('en-IN') });
+            db.ref('withdrawRequests').set(withdrawRequests);
+            alert('✅ विड्रॉल अनुरोध सफलतापूर्वक दर्ज कर लिया गया है!');
+            closeWithdraw();
+        }
+
+        function renderUserTransactionHistory() {
+            const box = document.getElementById('user-transaction-history-box');
+            if (!box) return;
+            let myDeps = (depositRequests || []).filter(r => r.user === activeUserPhone).map(r => ({ ...r, kind: 'डिपॉजिट' }));
+            let myWits = (withdrawRequests || []).filter(r => r.user === activeUserPhone).map(r => ({ ...r, kind: 'विड्रॉल' }));
+            let combined = [...myDeps, ...myWits].sort((a,b) => b.id - a.id);
+
+            if (combined.length === 0) {
+                box.innerHTML = `<p style="color:#888; text-align:center;">अभी कोई ट्रांजैक्शन नहीं है।</p>`;
+                return;
+            }
+            box.innerHTML = combined.map(item => {
+                let stBadge = item.status === 'approved' ? `<span style="color:#4caf50;">[अप्रूव]</span>` : (item.status === 'rejected' ? `<span style="color:#ff4444;">[रिजेक्ट]</span>` : `<span style="color:#ff9800;">[पेंडिंग]</span>`);
+                return `<div style="padding:4px 0; border-bottom:1px dashed #333;"><b>${item.kind}:</b> ₹${item.amount} ${stBadge} <span style="color:#888;">(${item.time})</span></div>`;
+            }).join('');
         }
 
         function renderAdminLists() {
             const depBox = document.getElementById('admin-deposit-list');
             const witBox = document.getElementById('admin-withdraw-list');
-            depBox.innerHTML = ''; witBox.innerHTML = '';
-            if (depositRequests.length === 0) depBox.innerHTML = '<p style="color:#aaa; font-size:0.85rem;">कोई डिपॉजिट अनुरोध नहीं है।</p>';
-            depositRequests.forEach((r, idx) => {
-                let stBadge = r.status === 'pending' ? '<span class="badge badge-pending">Pending</span>' : (r.status === 'approved' ? '<span class="badge badge-approved">Approved</span>' : '<span class="badge badge-rejected">Rejected</span>');
-                let btns = r.status === 'pending' ? `<div style="display:flex; gap:5px; margin-top:5px;"><button type="button" class="btn" style="background:#28a745; color:#fff; margin:0; padding:6px; font-size:0.8rem;" onclick="approveDeposit(${idx})">✅ अप्रूव करें</button><button type="button" class="btn" style="background:#dc2626; color:#fff; margin:0; padding:6px; font-size:0.8rem;" onclick="rejectDeposit(${idx})">❌ रिजेक्ट</button></div>` : '';
-                depBox.innerHTML += `<div class="req-card"><b>यूज़र:</b> ${r.user} | <b>राशि:</b> ₹${r.amount}<br><b>UTR:</b> ${r.utr} | ${stBadge}<br>${btns}</div>`;
-            });
-            if (withdrawRequests.length === 0) witBox.innerHTML = '<p style="color:#aaa; font-size:0.85rem;">कोई विड्रॉल अनुरोध नहीं है।</p>';
-            withdrawRequests.forEach((r, idx) => {
-                let stBadge = r.status === 'pending' ? '<span class="badge badge-pending">Pending</span>' : '<span class="badge badge-approved">Paid</span>';
-                let btn = r.status === 'pending' ? `<button type="button" class="btn" style="background:#28a745; color:#fff; margin-top:5px; padding:6px; font-size:0.8rem;" onclick="approveWithdraw(${idx})">✅ भुगतान पूरा किया</button>` : '';
-                witBox.innerHTML += `<div class="req-card"><b>यूज़र:</b> ${r.user} | <b>राशि:</b> ₹${r.amount}<br><b>माध्यम:</b> ${r.method} | ${stBadge}<br>${btn}</div>`;
-            });
+            depBox.innerHTML = '';
+            witBox.innerHTML = '';
+
+            if (!depositRequests || depositRequests.length === 0) depBox.innerHTML = '<p style="color:#888;">कोई डिपॉजिट अनुरोध नहीं है।</p>';
+            else {
+                depositRequests.forEach((req, idx) => {
+                    let bClass = req.status === 'approved' ? 'badge-approved' : (req.status === 'rejected' ? 'badge-rejected' : 'badge-pending');
+                    depBox.innerHTML += `
+                        <div class="req-card">
+                            <b>यूज़र:</b> ${req.user} | <b>राशि:</b> ₹${req.amount} <span class="badge ${bClass}">${req.status}</span><br>
+                            <b>UTR:</b> ${req.utr} | <b>समय:</b> ${req.time}<br>
+                            ${req.status === 'pending' ? `
+                                <div style="display:flex; gap:8px; margin-top:8px;">
+                                    <button type="button" class="btn" style="margin:0; padding:5px 10px; font-size:0.75rem; background:#4caf50; color:#fff; width:auto;" onclick="approveDeposit(${idx})">✅ Approve</button>
+                                    <button type="button" class="btn" style="margin:0; padding:5px 10px; font-size:0.75rem; background:#dc2626; color:#fff; width:auto;" onclick="rejectDeposit(${idx})">❌ Reject</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+            }
+
+            if (!withdrawRequests || withdrawRequests.length === 0) witBox.innerHTML = '<p style="color:#888;">कोई विड्रॉल अनुरोध नहीं है।</p>';
+            else {
+                withdrawRequests.forEach((req, idx) => {
+                    let bClass = req.status === 'approved' ? 'badge-approved' : (req.status === 'rejected' ? 'badge-rejected' : 'badge-pending');
+                    witBox.innerHTML += `
+                        <div class="req-card">
+                            <b>यूज़र:</b> ${req.user} | <b>राशि:</b> ₹${req.amount} <span class="badge ${bClass}">${req.status}</span><br>
+                            <b>विवरण:</b> ${req.details}<br>
+                            <b>समय:</b> ${req.time}<br>
+                            ${req.status === 'pending' ? `
+                                <div style="display:flex; gap:8px; margin-top:8px;">
+                                    <button type="button" class="btn" style="margin:0; padding:5px 10px; font-size:0.75rem; background:#4caf50; color:#fff; width:auto;" onclick="approveWithdraw(${idx})">✅ Approve</button>
+                                    <button type="button" class="btn" style="margin:0; padding:5px 10px; font-size:0.75rem; background:#dc2626; color:#fff; width:auto;" onclick="rejectWithdraw(${idx})">❌ Reject & Refund</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+            }
         }
 
-        function approveDeposit(index) {
-            let r = depositRequests[index];
-            r.status = 'approved';
-            db.ref('depositRequests').set(depositRequests);
-            db.ref('userWallets/' + r.user).once('value').then((snap) => {
-                let uBal = snap.exists() ? Number(snap.val()) : 0;
-                db.ref('userLockedBonuses/' + r.user).once('value').then((bSnap) => {
-                    let lBonus = bSnap.exists() ? Number(bSnap.val()) : 0;
-                    let totalAdd = r.amount + lBonus;
-                    db.ref('userWallets/' + r.user).set(uBal + totalAdd);
-                    db.ref('userLockedBonuses/' + r.user).set(0);
-                    if (r.user === activeUserPhone) { currentWallet = uBal + totalAdd; currentLockedBonus = 0; updateWalletUI(); }
-                    renderAdminLists();
-                    alert(`✅ ₹${r.amount} अप्रूव हुआ और ₹${lBonus} लॉक्ड बोनस अनलॉक कर वॉलेट में जोड़ दिया गया!`);
+        function approveDeposit(idx) {
+            let req = depositRequests[idx];
+            if (!req || req.status !== 'pending') return;
+            req.status = 'approved';
+
+            db.ref('userLockedBonuses/' + req.user).once('value').then(snap => {
+                let lBonus = snap.exists() ? Number(snap.val()) : 0;
+                let unlockAmt = (req.amount >= 99 && lBonus > 0) ? lBonus : 0;
+                db.ref('userLockedBonuses/' + req.user).set(0);
+
+                db.ref('userWallets/' + req.user).once('value').then(wSnap => {
+                    let curW = wSnap.exists() ? Number(wSnap.val()) : 0;
+                    let addedTotal = Number(req.amount) + unlockAmt;
+                    let newW = curW + addedTotal;
+                    db.ref('userWallets/' + req.user).set(newW);
+                    if (req.user === activeUserPhone) {
+                        currentWallet = newW;
+                        currentLockedBonus = 0;
+                        updateWalletUI();
+                    }
                 });
             });
+
+            db.ref('depositRequests').set(depositRequests);
+            renderAdminLists();
+            alert('✅ डिपॉजिट अप्रूव हो गया और लॉक्ड बोनस अनलॉक होकर वॉलेट में जुड़ गया!');
         }
 
-        function rejectDeposit(index) {
-            depositRequests[index].status = 'rejected';
+        function rejectDeposit(idx) {
+            let req = depositRequests[idx];
+            if (!req || req.status !== 'pending') return;
+            req.status = 'rejected';
             db.ref('depositRequests').set(depositRequests);
             renderAdminLists();
         }
 
-        function approveWithdraw(index) {
-            withdrawRequests[index].status = 'approved';
+        function approveWithdraw(idx) {
+            let req = withdrawRequests[idx];
+            if (!req || req.status !== 'pending') return;
+            req.status = 'approved';
             db.ref('withdrawRequests').set(withdrawRequests);
             renderAdminLists();
+            alert('✅ विड्रॉल अप्रूव कर दिया गया है!');
+        }
+
+        function rejectWithdraw(idx) {
+            let req = withdrawRequests[idx];
+            if (!req || req.status !== 'pending') return;
+            req.status = 'rejected';
+            db.ref('userWallets/' + req.user).once('value').then(snap => {
+                let curW = snap.exists() ? Number(snap.val()) : 0;
+                let refunded = curW + Number(req.amount);
+                db.ref('userWallets/' + req.user).set(refunded);
+                if (req.user === activeUserPhone) {
+                    currentWallet = refunded;
+                    updateWalletUI();
+                }
+            });
+            db.ref('withdrawRequests').set(withdrawRequests);
+            renderAdminLists();
+            alert('❌ विड्रॉल रिजेक्ट किया गया और राशि यूज़र के वॉलेट में वापस कर दी गई।');
         }
 
         function renderAdminHelpRequests() {
             const box = document.getElementById('admin-help-requests-list');
             box.innerHTML = '';
-            if (helpRequests.length === 0) { box.innerHTML = '<p style="color:#aaa; font-size:0.85rem;">कोई रिक्वेस्ट नहीं है।</p>'; return; }
-            helpRequests.forEach((req, idx) => {
-                let isRecover = req.type === 'PASSWORD_RECOVER_SMS';
-                let userPass = (usersDB[req.user] && usersDB[req.user].pass) ? usersDB[req.user].pass : "1234";
-                let actionBtn = isRecover
-                    ? `<button type="button" class="btn" style="background:#16a34a; color:#fff; margin-top:5px; padding:6px; font-size:0.78rem;" onclick="sendRecoverSMSNow(${idx}, '${req.user}', '${userPass}')">📱 ${req.user} को SMS भेजें (Pass: ${userPass})</button>`
-                    : `<button type="button" class="btn" style="background:#28a745; color:#fff; margin-top:5px; padding:5px; font-size:0.75rem;" onclick="resolveHelpRequest(${idx})">✅ हल किया (Resolve)</button>`;
-                box.innerHTML += `<div class="req-card" style="${isRecover ? 'border-color:#f59e0b;' : ''}"><b>मोबाइल / यूज़र:</b> ${req.user} ${req.locked ? '<span class="badge badge-pending">🔒 LOCKED</span>' : ''}<br><b>संदेश:</b> ${req.message}<br><b>स्थिति:</b> ${req.status} (${req.smsStatus || ''})<br>${actionBtn}</div>`;
+            if (!helpRequests || helpRequests.length === 0) {
+                box.innerHTML = '<p style="color:#888;">कोई AI हेल्प या पासवर्ड रिकवरी रिक्वेस्ट नहीं है।</p>';
+                return;
+            }
+            helpRequests.forEach((r, idx) => {
+                let passInfo = (usersDB[r.user] && usersDB[r.user].pass) ? usersDB[r.user].pass : "अज्ञात";
+                let isRecover = r.type === 'PASSWORD_RECOVER_SMS';
+                let smsDone = r.smsStatus === 'SENT_SMS';
+                box.innerHTML += `
+                    <div class="req-card" style="${isRecover ? 'border-color:#f59e0b; background:#1c1608;' : ''}">
+                        <b>मोबाइल/यूज़र:</b> ${r.user} | <b>समय:</b> ${r.time}<br>
+                        ${isRecover ? `<span style="color:#fbbf24; font-weight:bold;">🔒 लॉक्ड रिक्वेस्ट • पासवर्ड: ${passInfo} • SMS स्टेटस: ${smsDone ? '✅ SMS भेजा गया' : '⏳ SMS पेंडिंग'}</span><br>` : ''}
+                        <span style="color:var(--accent);">${r.message}</span><br>
+                        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                            ${isRecover && !smsDone ? `<button type="button" class="btn" style="margin:0; padding:5px 10px; font-size:0.75rem; background:#16a34a; color:#fff; width:auto;" onclick="sendRecoverSMSNow(${idx})">📲 मोबाइल पर SMS भेजें</button>` : ''}
+                            <button type="button" class="btn" style="margin:0; padding:5px 10px; font-size:0.75rem; background:#dc2626; color:#fff; width:auto;" onclick="deleteHelpRequest(${idx})">🗑️ हटाएं</button>
+                        </div>
+                    </div>
+                `;
             });
         }
 
-        function sendRecoverSMSNow(idx, mob, passVal) {
-            helpRequests[idx].status = 'resolved';
-            helpRequests[idx].smsStatus = 'SMS_SENT';
-            helpRequests[idx].locked = false;
+        function sendRecoverSMSNow(idx) {
+            let r = helpRequests[idx];
+            if (!r) return;
+            r.smsStatus = 'SENT_SMS';
+            r.status = 'sms_sent';
             db.ref('helpRequests').set(helpRequests);
             renderAdminHelpRequests();
-            alert(`📲 मोबाइल नंबर ${mob} पर पासवर्ड SMS भेज दिया गया है! (Password: ${passVal})`);
+            let passVal = (usersDB[r.user] && usersDB[r.user].pass) ? usersDB[r.user].pass : "";
+            let smsBody = encodeURIComponent(`Good Luck Laxmi: Aapka Password hai ${passVal}`);
+            window.open(`sms:${r.user}?body=${smsBody}`, '_blank');
         }
 
-        function resolveHelpRequest(idx) {
-            helpRequests[idx].status = 'resolved';
+        function deleteHelpRequest(idx) {
+            helpRequests.splice(idx, 1);
             db.ref('helpRequests').set(helpRequests);
             renderAdminHelpRequests();
         }
 
-        function renderUserTransactionHistory() {
-            const box = document.getElementById('user-transaction-history-box');
-            box.innerHTML = '';
-            let myDeps = depositRequests.filter(r => r.user === activeUserPhone).map(d => ({ ...d, tType: 'डिपॉजिट' }));
-            let myWits = withdrawRequests.filter(r => r.user === activeUserPhone).map(w => ({ ...w, tType: 'विड्रॉल' }));
-            let combined = [...myDeps, ...myWits].sort((a,b) => b.id - a.id);
-            if (combined.length === 0) { box.innerHTML = '<div style="color:#777; padding:5px;">कोई लेन-देन रिकॉर्ड नहीं मिला।</div>'; return; }
-            combined.forEach(item => {
-                let stColor = item.status === 'approved' ? '#4caf50' : (item.status === 'rejected' ? '#ff4444' : '#ff9800');
-                box.innerHTML += `<div style="border-bottom:1px dashed #333; padding:4px 0;"><b>${item.tType}:</b> ₹${item.amount} | <span style="color:${stColor}">${item.status.toUpperCase()}</span> <span style="float:right; color:#aaa; font-size:0.7rem;">${item.time}</span></div>`;
-            });
+        function openRates() { document.getElementById('rates-modal').classList.remove('hidden'); }
+        function closeRates() { document.getElementById('rates-modal').classList.add('hidden'); }
+
+        function openProfile() {
+            document.getElementById('prof-phone').innerText = activeUserPhone || '-';
+            document.getElementById('prof-balance').innerText = currentWallet;
+            document.getElementById('prof-locked-bonus').innerText = currentLockedBonus;
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+        function closeProfile() { document.getElementById('profile-modal').classList.add('hidden'); }
+
+        function updateWalletUI() {
+            const balEl = document.getElementById('wallet-balance');
+            if (balEl) balEl.innerText = currentWallet;
+            const amarBalEl = document.getElementById('amar-wallet-bal');
+            if (amarBalEl) amarBalEl.innerText = currentWallet;
+
+            const lbEl = document.getElementById('locked-bonus-val');
+            const lbBanner = document.getElementById('locked-bonus-banner-box');
+            if (lbEl) lbEl.innerText = currentLockedBonus;
+            if (lbBanner) {
+                if (currentLockedBonus > 0) lbBanner.classList.remove('hidden');
+                else lbBanner.classList.add('hidden');
+            }
         }
     </script>
 </body>
