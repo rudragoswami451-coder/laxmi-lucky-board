@@ -3647,15 +3647,19 @@
             let now = getIndiaNow();
             let currentMins = now.getHours() * 60 + now.getMinutes();
             let targetType = typeOverride || currentType;
-            let slotData = targetType === 'shubh' ? shubhSlotData : dhanSlotData;
+            let slotData = (targetType === 'shubh' ? shubhSlotData : dhanSlotData).filter(s => s.type !== 'lunch');
             for (let i = 0; i < slotData.length; i++) {
                 let slot = slotData[i];
-                if (slot.type === 'lunch') continue;
                 let endMins = timeStrToMins(slot.end);
-                if (currentMins < endMins) return { slot: slot, index: i };
+                if (currentMins < endMins) {
+                    return { slot: slot, index: i, durationMins: (targetType === 'shubh' ? 15 : 30) };
+                }
             }
-            let validSlots = slotData.filter(s => s.type !== 'lunch');
-            return { slot: validSlots[validSlots.length - 1], index: slotData.length - 1 };
+            return {
+                slot: slotData[slotData.length - 1],
+                index: slotData.length - 1,
+                durationMins: (targetType === 'shubh' ? 15 : 30)
+            };
         }
 
         function openGameScreen(mode) {
@@ -4118,10 +4122,13 @@
             timerEl.style.fontSize = '2.15rem';
             if (adminTimerEl) adminTimerEl.style.fontSize = '1.3rem';
 
-            let activeInfo = getCurrentActiveSlotObject();
+            let activeInfo = getCurrentActiveSlotObject(currentType);
             let slot = activeInfo.slot;
+            let startMins = timeStrToMins(slot.start);
             let endMins = timeStrToMins(slot.end);
-            let remainingTotalSecs = (endMins - currentMins) * 60 - currentSecs;
+
+            let targetMins = (currentMins < startMins) ? startMins : endMins;
+            let remainingTotalSecs = (targetMins - currentMins) * 60 - currentSecs;
             if (remainingTotalSecs < 0) remainingTotalSecs = 0;
 
             let m = Math.floor(remainingTotalSecs / 60);
@@ -4131,18 +4138,24 @@
             timerEl.innerText = formattedTime;
             if (adminTimerEl) adminTimerEl.innerText = formattedTime;
 
-            let gameTag = currentType === 'shubh' ? 'शुभ लक्ष्मी (15 मि.)' : 'धन लक्ष्मी (30 मि.)';
-            if (remainingTotalSecs <= 60) {
+            let gameTag = currentType === 'shubh' ? 'शुभ लक्ष्मी (15 मि. स्लॉट)' : 'धन लक्ष्मी (30 मि. स्लॉट)';
+            let lockSecs = (endMins - currentMins) * 60 - currentSecs;
+
+            if (lockSecs > 0 && lockSecs <= 60) {
                 timerEl.classList.add('red-lock');
                 if (adminTimerEl) adminTimerEl.classList.add('red-lock');
-                hintEl.innerText = `🔒 लॉक! ${gameTag} स्लॉट (${slot.start} - ${slot.end}) का परिणाम आने वाला है।`;
+                hintEl.innerText = `🔒 लॉक! ${gameTag} (${slot.start} - ${slot.end}) का परिणाम आने वाला है।`;
+            } else if (currentMins < startMins) {
+                timerEl.classList.remove('red-lock');
+                if (adminTimerEl) adminTimerEl.classList.remove('red-lock');
+                hintEl.innerText = `⏳ अगला स्लॉट (${gameTag}): ${slot.start} - ${slot.end} शुरू होने में`;
             } else {
                 timerEl.classList.remove('red-lock');
                 if (adminTimerEl) adminTimerEl.classList.remove('red-lock');
                 hintEl.innerText = `✅ बुकिंग चालू (${gameTag}): ${slot.start} - ${slot.end}`;
             }
 
-            if (remainingTotalSecs > 0 && remainingTotalSecs <= 10 && isGoodLuckMainScreenActive()) {
+            if (lockSecs > 0 && lockSecs <= 10 && isGoodLuckMainScreenActive()) {
                 playTickSound();
             }
         }
