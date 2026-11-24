@@ -1,4 +1,4 @@
-DOCTYPE html>
+OCTYPE html>
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
@@ -829,41 +829,131 @@ DOCTYPE html>
             border-radius: 999px;
             margin-left: 4px;
         }
-        .mybet-structured-card {
-            background: #1c1930;
-            border: 1.5px solid rgba(255, 215, 0, 0.28);
-            border-radius: 11px;
-            padding: 11px;
-            margin-bottom: 9px;
-            text-align: left;
-        }
-        .mybet-grid-4 {
+        .mybet-subtabs-row {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 6px;
-            margin-top: 6px;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
         }
-        .mybet-pill-cell {
-            background: #121022;
-            border: 1px solid #334155;
-            border-radius: 7px;
-            padding: 6px 8px;
+        .mybet-subtab-btn {
+            padding: 9px 8px;
+            border-radius: 9px;
+            font-weight: 900;
+            font-size: 0.84rem;
+            cursor: pointer;
+            border: 1.5px solid #475569;
+            background: #141226;
+            color: #cbd5e1;
+            transition: all 0.2s ease;
+        }
+        .mybet-subtab-btn.active-shubh {
+            background: linear-gradient(135deg, #8b0024, #4c0519);
+            border-color: #f5c542;
+            color: #fde68a;
+            box-shadow: 0 0 12px rgba(245, 197, 66, 0.35);
+        }
+        .mybet-subtab-btn.active-dhan {
+            background: linear-gradient(135deg, #065f46, #022c22);
+            border-color: #34d399;
+            color: #a7f3d0;
+            box-shadow: 0 0 12px rgba(52, 211, 153, 0.35);
+        }
+        .mybet-live-summary-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            background: linear-gradient(135deg, #16132b, #231c42);
+            border: 1px solid rgba(250, 204, 21, 0.35);
+            border-radius: 9px;
+            padding: 8px 6px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .mybet-sum-item span { display: block; font-size: 0.68rem; color: #94a3b8; }
+        .mybet-sum-item b { font-size: 0.9rem; color: #ffd166; }
+
+        .mybet-slip-card {
+            background: linear-gradient(160deg, #1b1830, #121022);
+            border: 1.5px solid rgba(255, 215, 0, 0.28);
+            border-radius: 12px;
+            padding: 11px;
+            margin-bottom: 10px;
+            text-align: left;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .mybet-slip-card.slip-won {
+            border-color: #22c55e;
+            background: linear-gradient(160deg, #0d2b1d, #0a1f16);
+            box-shadow: 0 0 14px rgba(34, 197, 94, 0.28);
+        }
+        .mybet-slip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+            padding-bottom: 7px;
+            border-bottom: 1px dashed rgba(255,255,255,0.14);
+            margin-bottom: 8px;
+        }
+        .mybet-status-pill {
+            font-size: 0.68rem;
+            font-weight: 900;
+            padding: 2px 8px;
+            border-radius: 999px;
+            letter-spacing: 0.3px;
+        }
+        .status-pill-live { background: rgba(234, 179, 8, 0.18); color: #fde047; border: 1px solid #eab308; }
+        .status-pill-win { background: #16a34a; color: #fff; border: 1px solid #86efac; }
+        .status-pill-done { background: rgba(148, 163, 184, 0.16); color: #cbd5e1; border: 1px solid #475569; }
+
+        .mybet-entry-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 6px 0;
+        }
+        .mybet-num-chip {
+            background: #231f3d;
+            border: 1px solid #6366f1;
+            border-radius: 8px;
+            padding: 5px 9px;
+            font-size: 0.82rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mybet-num-chip .num-val {
+            font-size: 0.96rem;
+            font-weight: 900;
+            color: #ffd166;
+        }
+        .mybet-num-chip .pts-val {
+            color: #7ef9ff;
+            font-weight: 700;
+            font-size: 0.78rem;
+        }
+        .mybet-slip-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px dashed rgba(255,255,255,0.12);
             font-size: 0.8rem;
         }
-        .mybet-pill-label {
-            display: block;
-            font-size: 0.68rem;
-            color: #94a3b8;
-            margin-bottom: 2px;
+        .history-pill-bar {
+            margin-top: 10px;
+            background: #141226;
+            border: 1px solid #475569;
+            border-radius: 9px;
+            padding: 8px 11px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
         }
-        .yesterday-24hr-box {
-            margin-top: 14px;
-            background: #131122;
-            border: 1.5px dashed #f5b041;
-            border-radius: 10px;
-            padding: 10px;
-            text-align: left;
-        }
+        .history-pill-bar:hover { border-color: #f5b041; }
         .amar-admin-2tabs {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1330,7 +1420,7 @@ DOCTYPE html>
         <div class="auto-toggle-box">
             <div>
                 <strong style="color:var(--accent); font-size:0.85rem;">🤖 स्मार्ट रैंडम (पूरे भारत में एक जैसा रिजल्ट लॉक)</strong>
-                <p style="font-size:0.7rem; color:#aaa;" id="auto-status-desc">स्टेटस: चालू (स्लॉट चाबी से एक जैसा रिजल्ट • एडमिन लॉक का सम्मान)</p>
+                <p style="font-size:0.7rem; color:#aaa;" id="auto-status-desc">स्टेटस: चालू (30% लोड प्रॉफिट सेफ्टी • पूरे भारत में एक जैसा रिजल्ट)</p>
             </div>
             <button type="button" class="btn" id="auto-toggle-btn" style="width:auto; padding:6px 12px; margin:0; font-size:0.8rem; background:#ff4444; color:#fff;" onclick="toggleAutoRandomSystem()">🛑 STOP AUTO</button>
         </div>
@@ -1556,19 +1646,25 @@ DOCTYPE html>
 
     <!-- MY BET MODAL -->
     <div class="modal hidden" id="my-bets-modal">
-        <div class="modal-content" style="max-width:640px;">
-            <h3 id="my-bets-modal-title" style="color: var(--secondary); margin-bottom: 8px;">📝 My Bet</h3>
-            <div id="my-bets-container" style="max-height: 270px; overflow-y: auto; text-align: left;"></div>
+        <div class="modal-content" style="max-width:640px; padding:15px;">
+            <h3 id="my-bets-modal-title" style="color: var(--secondary); margin-bottom: 8px;">📝 My Bet (लाइव दांव)</h3>
 
-            <div class="yesterday-24hr-box">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px;">
-                    <strong style="color:#ffd166; font-size:0.88rem;">🕒 कल के दांव / पर्चियाँ (24 घंटे बॉक्स)</strong>
-                    <span style="font-size:0.7rem; color:#cbd5e1;">24 घंटे बाद अपने आप हट जाएगा</span>
-                </div>
-                <div id="my-bets-yesterday-24hr" style="max-height:150px; overflow-y:auto;"></div>
+            <div id="mybet-luck-subtabs" class="mybet-subtabs-row">
+                <button type="button" id="mybet-tab-shubh" class="mybet-subtab-btn active-shubh" onclick="switchMyBetLuckSubTab('shubh')">⭐ शुभ लक्ष्मी (15 मि.)</button>
+                <button type="button" id="mybet-tab-dhan" class="mybet-subtab-btn" onclick="switchMyBetLuckSubTab('dhan')">💰 धन लक्ष्मी (30 मि.)</button>
             </div>
 
-            <button type="button" class="btn" style="margin-top:12px;" onclick="closeMyBetsHistory()">बंद करें</button>
+            <div id="mybet-live-summary" class="mybet-live-summary-bar"></div>
+
+            <div id="my-bets-container" style="max-height: 360px; overflow-y: auto; text-align: left;"></div>
+
+            <div class="history-pill-bar" onclick="toggleMyBetHistoryDrawer()">
+                <span style="font-size:0.84rem; font-weight:800; color:#ffd166;">📜 History (कल के पुराने दांव देखें)</span>
+                <span id="mybet-history-toggle-arrow" style="font-size:0.78rem; color:#7ef9ff; font-weight:bold;">▼ खोलें</span>
+            </div>
+            <div id="my-bets-yesterday-24hr" class="hidden" style="max-height:190px; overflow-y:auto; margin-top:8px; text-align:left;"></div>
+
+            <button type="button" class="btn" style="margin-top:10px;" onclick="closeMyBetsHistory()">बंद करें</button>
         </div>
     </div>
 
@@ -1641,29 +1737,35 @@ DOCTYPE html>
             const slotBets = betsList.filter(b => (b.dateKey || dateKey) === dateKey && b.slotTime === slotTimeStr);
 
             let totalCollection = slotBets.reduce((s, b) => s + (Number(b.points) || 0), 0);
-            let maxAllowedPayout = totalCollection * 0.70; // कम से कम 30% एडमिन प्रॉफिट सेफ्टी
+            // 30% लोड/प्रॉफिट सेफ्टी नियम: कुल कलेक्शन का अधिकतम 70% ही विनर्स में जाए, कम से कम 30% लोड/प्रॉफिट सुरक्षित रहे
+            let maxAllowedPayout = totalCollection * 0.70;
+
+            function calcPattiPayout(pattiStr, sessionType) {
+                let pay = 0;
+                slotBets.forEach(b => {
+                    if (b.gameType === sessionType && String(b.number) === pattiStr) {
+                        let pts = Number(b.points) || 0;
+                        if (b.gameMode === 'Single Pana') pay += pts * 150;
+                        else if (b.gameMode === 'Double Pana') pay += pts * 300;
+                        else if (b.gameMode === 'Triple Pana') pay += pts * 700;
+                    }
+                });
+                return pay;
+            }
 
             function pickSafePattiForDigit(targetDigit, seedVal, sessionType) {
                 let matchingPattis = pool.filter(p => (p.split('').reduce((a, c) => Number(a) + Number(c), 0) % 10) === targetDigit);
                 if (matchingPattis.length === 0) matchingPattis = pool;
-                let minPattiLoad = Infinity;
-                let safestList = [];
-                matchingPattis.forEach(p => {
-                    let pLoad = slotBets
-                        .filter(b => b.gameMode && b.gameMode.includes('Pana') && b.gameType === sessionType && String(b.number) === p)
-                        .reduce((s, b) => s + (Number(b.points) || 0), 0);
-                    if (pLoad < minPattiLoad) {
-                        minPattiLoad = pLoad;
-                        safestList = [p];
-                    } else if (pLoad === minPattiLoad) {
-                        safestList.push(p);
-                    }
-                });
-                return safestList[seedVal % safestList.length];
+                let scored = matchingPattis.map(p => ({ p, pay: calcPattiPayout(p, sessionType) }));
+                let zeroPay = scored.filter(x => x.pay === 0);
+                if (zeroPay.length > 0) return zeroPay[seedVal % zeroPay.length].p;
+                let minPay = Math.min(...scored.map(x => x.pay));
+                let safest = scored.filter(x => x.pay === minPay);
+                return safest[seedVal % safest.length].p;
             }
 
-            const openSeed = deterministicHash(`GLL_PROFIT_V3|${dateKey}|${lotteryType}|${slotStart}|${slotEnd}|OPEN`);
-            const closeSeed = deterministicHash(`GLL_PROFIT_V3|${dateKey}|${lotteryType}|${slotStart}|${slotEnd}|CLOSE`);
+            const openSeed = deterministicHash(`GLL_30LOAD_V4|${dateKey}|${lotteryType}|${slotStart}|${slotEnd}|OPEN`);
+            const closeSeed = deterministicHash(`GLL_30LOAD_V4|${dateKey}|${lotteryType}|${slotStart}|${slotEnd}|CLOSE`);
 
             let opPatti, opDigit;
             if (fixedOpenStr && fixedOpenStr.includes('-')) {
@@ -1671,24 +1773,36 @@ DOCTYPE html>
                 opPatti = parts[0].trim();
                 opDigit = parts[1].trim();
             } else {
-                let digitScores = [];
+                let openCandidates = [];
                 for (let d = 0; d <= 9; d++) {
                     let dStr = String(d);
+                    let candPatti = pickSafePattiForDigit(d, openSeed + d, 'OPEN');
                     let openSinglePts = slotBets
                         .filter(b => b.gameMode === 'Single Digit' && b.gameType === 'OPEN' && String(b.number) === dStr)
                         .reduce((s, b) => s + (Number(b.points) || 0), 0);
-                    let estPayout = openSinglePts * 10;
-                    digitScores.push({ d, estPayout });
+                    let estOpenPay = (openSinglePts * 10) + calcPattiPayout(candPatti, 'OPEN');
+                    openCandidates.push({ d, dStr, candPatti, estOpenPay });
                 }
-                let safeDigits = digitScores.filter(x => totalCollection === 0 || x.estPayout <= maxAllowedPayout * 0.5);
-                if (safeDigits.length === 0) {
-                    let minPay = Math.min(...digitScores.map(x => x.estPayout));
-                    safeDigits = digitScores.filter(x => x.estPayout === minPay);
+                let safeOpen = openCandidates.filter(x => totalCollection === 0 || x.estOpenPay <= maxAllowedPayout * 0.5);
+                if (safeOpen.length === 0) {
+                    let minPay = Math.min(...openCandidates.map(x => x.estOpenPay));
+                    safeOpen = openCandidates.filter(x => x.estOpenPay === minPay);
                 }
-                let chosenOpen = safeDigits[openSeed % safeDigits.length].d;
-                opDigit = String(chosenOpen);
-                opPatti = pickSafePattiForDigit(chosenOpen, openSeed, 'OPEN');
+                let chosenOpen = safeOpen[openSeed % safeOpen.length];
+                opDigit = chosenOpen.dStr;
+                opPatti = chosenOpen.candPatti;
             }
+
+            let openFixedPay = 0;
+            slotBets.forEach(b => {
+                let pts = Number(b.points) || 0;
+                if (b.gameType === 'OPEN') {
+                    if (b.gameMode === 'Single Digit' && String(b.number) === opDigit) openFixedPay += pts * 10;
+                    else if (b.gameMode === 'Single Pana' && String(b.number) === opPatti) openFixedPay += pts * 150;
+                    else if (b.gameMode === 'Double Pana' && String(b.number) === opPatti) openFixedPay += pts * 300;
+                    else if (b.gameMode === 'Triple Pana' && String(b.number) === opPatti) openFixedPay += pts * 700;
+                }
+            });
 
             let closeCandidates = [];
             for (let cd = 0; cd <= 9; cd++) {
@@ -1696,20 +1810,13 @@ DOCTYPE html>
                 let jodiStr = `${opDigit}${cdStr}`;
                 let clPattiCand = pickSafePattiForDigit(cd, closeSeed + cd, 'CLOSE');
 
-                let payout = 0;
+                let payout = openFixedPay + calcPattiPayout(clPattiCand, 'CLOSE');
                 slotBets.forEach(b => {
                     let pts = Number(b.points) || 0;
-                    if (b.gameMode === 'Single Digit') {
-                        if (b.gameType === 'OPEN' && String(b.number) === opDigit) payout += pts * 10;
-                        if (b.gameType === 'CLOSE' && String(b.number) === cdStr) payout += pts * 10;
+                    if (b.gameMode === 'Single Digit' && b.gameType === 'CLOSE' && String(b.number) === cdStr) {
+                        payout += pts * 10;
                     } else if (b.gameMode === 'Jodi Digit' && String(b.number) === jodiStr) {
                         payout += pts * 100;
-                    } else if (b.gameMode === 'Single Pana' && ((b.gameType === 'OPEN' && String(b.number) === opPatti) || (b.gameType === 'CLOSE' && String(b.number) === clPattiCand))) {
-                        payout += pts * 150;
-                    } else if (b.gameMode === 'Double Pana' && ((b.gameType === 'OPEN' && String(b.number) === opPatti) || (b.gameType === 'CLOSE' && String(b.number) === clPattiCand))) {
-                        payout += pts * 300;
-                    } else if (b.gameMode === 'Triple Pana' && ((b.gameType === 'OPEN' && String(b.number) === opPatti) || (b.gameType === 'CLOSE' && String(b.number) === clPattiCand))) {
-                        payout += pts * 700;
                     }
                 });
                 closeCandidates.push({ cd, cdStr, jodiStr, clPatti: clPattiCand, payout });
@@ -4095,105 +4202,188 @@ DOCTYPE html>
             closeGameScreen();
         }
 
-        function formatStructuredMyBetCard(b) {
-            let openTxt = "—";
-            let closeTxt = "—";
-            let jodiTxt = "—";
-            let panaTxt = "—";
+        let currentMyBetLuckSubTab = 'shubh';
 
+        function isBetSlipFinished(b) {
+            const totalWonVal = Number(b.totalWonPoints || b.wonPoints || 0);
+            if (totalWonVal > 0) return true;
+            if (b.slotTime && (String(b.lottery || '').includes('शुभ') || String(b.lottery || '').includes('धन'))) {
+                let isDhan = String(b.lottery || '').includes('धन');
+                let slotsList = isDhan ? dhanSlotData : shubhSlotData;
+                let matched = (slotsList || []).find(s => `${s.start} - ${s.end}` === b.slotTime);
+                if (matched) {
+                    if (matched.stage === 'closed_declared') return true;
+                    if (b.gameType === 'OPEN' && matched.stage === 'open_declared') return true;
+                }
+            }
+            if (b.marketId && amarMarketResults && amarMarketResults[b.marketId]) {
+                let mRes = amarMarketResults[b.marketId];
+                if (mRes.finalPaid) return true;
+                if ((b.session === 'OPEN' || b.gameType === 'OPEN') && mRes.openDisplay) return true;
+            }
+            return false;
+        }
+
+        function formatStructuredMyBetCard(b) {
+            const totalWonVal = Number(b.totalWonPoints || b.wonPoints || 0);
+            const isWon = totalWonVal > 0;
+            const isDone = isBetSlipFinished(b);
+
+            let statusPillHtml = isWon
+                ? `<span class="mybet-status-pill status-pill-win">🏆 WIN +${totalWonVal} Pts</span>`
+                : (isDone
+                    ? `<span class="mybet-status-pill status-pill-done">✅ रिजल्ट घोषित</span>`
+                    : `<span class="mybet-status-pill status-pill-live">🟢 LIVE चल रहा है</span>`);
+
+            let chipsHtml = '';
             if (b.isParchi && Array.isArray(b.items)) {
-                const oArr = b.items.filter(i => i.kind === "OPEN").map(i => `${i.number} (${i.points} Pts)${i.won ? ` 🏆+${i.wonPoints}` : ''}`);
-                const cArr = b.items.filter(i => i.kind === "CLOSE").map(i => `${i.number} (${i.points} Pts)${i.won ? ` 🏆+${i.wonPoints}` : ''}`);
-                const jArr = b.items.filter(i => i.kind === "JODI").map(i => `${i.number} (${i.points} Pts)${i.won ? ` 🏆+${i.wonPoints}` : ''}`);
-                const pArr = b.items.filter(i => i.kind === "PANA").map(i => `${i.number} (${i.points} Pts)${i.won ? ` 🏆+${i.wonPoints}` : ''}`);
-                if (oArr.length) openTxt = oArr.join(", ");
-                if (cArr.length) closeTxt = cArr.join(", ");
-                if (jArr.length) jodiTxt = jArr.join(", ");
-                if (pArr.length) panaTxt = pArr.join(", ");
+                chipsHtml = b.items.map(it => `
+                    <div class="mybet-num-chip" style="${it.won ? 'border-color:#22c55e; background:#0d2b1d;' : ''}">
+                        <span style="font-size:0.72rem; color:#cbd5e1;">${it.hindiLabel || getHindiKindLabel(it.kind)}</span>
+                        <span class="num-val">${it.number}</span>
+                        <span class="pts-val">(${it.points} Pts)</span>
+                        ${it.won ? `<span class="win-chip">+${it.wonPoints}</span>` : ''}
+                    </div>
+                `).join('');
             } else {
                 const mode = String(b.gameMode || "");
                 const gType = String(b.gameType || b.session || "");
-                const winMark = b.wonPoints ? ` 🏆+${b.wonPoints}` : '';
-                if (mode === "Jodi Digit") jodiTxt = `${b.number} (${b.points} Pts)${winMark}`;
-                else if (mode.includes("Pana")) panaTxt = `${b.number} (${b.points} Pts)${winMark}`;
-                else if (gType === "CLOSE") closeTxt = `${b.number} (${b.points} Pts)${winMark}`;
-                else openTxt = `${b.number} (${b.points} Pts)${winMark}`;
+                let kindHindi = mode === "Jodi Digit" ? "जोड़ी" : (mode.includes("Pana") ? "पत्ती" : (gType === "CLOSE" ? "क्लोज" : "ओपन"));
+                chipsHtml = `
+                    <div class="mybet-num-chip" style="${isWon ? 'border-color:#22c55e; background:#0d2b1d;' : ''}">
+                        <span style="font-size:0.74rem; color:#cbd5e1;">${kindHindi} (${gType})</span>
+                        <span class="num-val">${b.number}</span>
+                        <span class="pts-val">• ${b.points} Points</span>
+                        ${isWon ? `<span class="win-chip">WIN +${totalWonVal}</span>` : ''}
+                    </div>
+                `;
             }
 
-            const totalWonVal = Number(b.totalWonPoints || b.wonPoints || 0);
-            const winHeaderBadge = totalWonVal > 0
-                ? `<span class="win-chip">🏆 WIN +${totalWonVal} Pts</span>`
-                : '';
+            const slotBadge = b.slotTime
+                ? `<div style="font-size:0.74rem; color:#7ef9ff; margin-bottom:4px;">⏰ स्लॉट: <b>${b.slotTime}</b> • ${b.gameMode || ''}</div>`
+                : `<div style="font-size:0.74rem; color:#7ef9ff; margin-bottom:4px;">🎲 ${b.isParchi ? 'AI हिंदी पर्ची' : (b.gameMode || '')}</div>`;
 
             const parchiBtnHtml = b.isParchi
-                ? `<button type="button" style="margin-top:8px; width:100%; background:#ffffff; color:#111111; border:2px solid #111111; border-radius:8px; padding:7px 10px; font-weight:900; font-size:0.82rem; cursor:pointer;" onclick="openLargeWhiteParchi('${b.id}')">🧾 सफ़ेद हिंदी पर्ची खोलें (${b.lottery}) ${totalWonVal > 0 ? '🏆 WIN' : ''}</button>`
+                ? `<button type="button" style="margin-top:8px; width:100%; background:#ffffff; color:#111111; border:2px solid #111111; border-radius:8px; padding:7px 10px; font-weight:900; font-size:0.82rem; cursor:pointer;" onclick="openLargeWhiteParchi('${b.id}')">🧾 सफ़ेद हिंदी पर्ची खोलें ${isWon ? '🏆 WIN' : ''}</button>`
                 : '';
 
             return `
-                <div class="mybet-structured-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:4px;">
+                <div class="mybet-slip-card ${isWon ? 'slip-won' : ''}">
+                    <div class="mybet-slip-header">
                         <div>
-                            <b style="color:var(--secondary); font-size:0.9rem;">${b.lottery || b.marketName || ""}</b>
-                            <span style="font-size:0.72rem; color:#7ef9ff;"> • ${b.isParchi ? "AI हिंदी पर्ची" : (b.gameMode || "दांव")}</span>
-                            ${winHeaderBadge}
+                            <b style="color:var(--secondary); font-size:0.92rem;">${b.lottery || b.marketName || ""}</b>
+                            <span style="font-size:0.7rem; color:#94a3b8; display:block;">लगाने का समय: ${b.mobileTime || b.time || ""}</span>
                         </div>
-                        <span style="font-size:0.72rem; color:#94a3b8;">${b.mobileTime || b.time || ""}</span>
+                        <div>${statusPillHtml}</div>
                     </div>
 
-                    <div class="mybet-grid-4">
-                        <div class="mybet-pill-cell"><span class="mybet-pill-label">आँकड़ा / ओपन (Open)</span><b>${openTxt}</b></div>
-                        <div class="mybet-pill-cell"><span class="mybet-pill-label">क्लोज (Close)</span><b>${closeTxt}</b></div>
-                        <div class="mybet-pill-cell"><span class="mybet-pill-label">जोड़ी (Jodi)</span><b>${jodiTxt}</b></div>
-                        <div class="mybet-pill-cell"><span class="mybet-pill-label">पत्ती (Pana)</span><b>${panaTxt}</b></div>
-                    </div>
+                    ${slotBadge}
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:7px; padding-top:6px; border-top:1px dashed rgba(255,255,255,0.12); font-size:0.82rem;">
-                        <span style="color:#cbd5e1;">कुल लगे पॉइंट्स:</span>
-                        <b style="color:#4ade80; font-size:0.9rem;">${b.points} Points</b>
+                    <div style="font-size:0.74rem; color:#cbd5e1; margin-top:4px;">क्या लगाया (आँकड़ा / नंबर व पॉइंट्स):</div>
+                    <div class="mybet-entry-chips">${chipsHtml}</div>
+
+                    <div class="mybet-slip-footer">
+                        <span style="color:#cbd5e1;">कुल लगा: <b style="color:#ffd166;">${b.points} Pts</b></span>
+                        <span>${isWon ? `<b style="color:#4ade80; font-size:0.92rem;">🏆 जीत: +${totalWonVal} Pts</b>` : `<span style="color:#94a3b8; font-size:0.76rem;">${isDone ? 'जीत: 0 Pts' : 'रिजल्ट का इंतज़ार...'}</span>`}</span>
                     </div>
                     ${parchiBtnHtml}
                 </div>
             `;
         }
 
-        function openMyBetsHistory(scope = 'luck') {
-            currentMyBetScope = scope;
-            const modal = document.getElementById('my-bets-modal');
+        function switchMyBetLuckSubTab(subType) {
+            currentMyBetLuckSubTab = subType;
+            const shubhBtn = document.getElementById('mybet-tab-shubh');
+            const dhanBtn = document.getElementById('mybet-tab-dhan');
+            if (shubhBtn && dhanBtn) {
+                shubhBtn.className = 'mybet-subtab-btn' + (subType === 'shubh' ? ' active-shubh' : '');
+                dhanBtn.className = 'mybet-subtab-btn' + (subType === 'dhan' ? ' active-dhan' : '');
+            }
+            renderMyBetsFilteredList();
+        }
+
+        function toggleMyBetHistoryDrawer() {
+            const box = document.getElementById('my-bets-yesterday-24hr');
+            const arrow = document.getElementById('mybet-history-toggle-arrow');
+            if (!box) return;
+            box.classList.toggle('hidden');
+            if (arrow) arrow.innerText = box.classList.contains('hidden') ? '▼ खोलें' : '▲ बंद करें';
+        }
+
+        function renderMyBetsFilteredList() {
             const titleEl = document.getElementById('my-bets-modal-title');
+            const sumEl = document.getElementById('mybet-live-summary');
             const container = document.getElementById('my-bets-container');
             const yBox = document.getElementById('my-bets-yesterday-24hr');
-            container.innerHTML = '';
-            yBox.innerHTML = '';
+            const luckTabs = document.getElementById('mybet-luck-subtabs');
+            if (!container || !yBox) return;
 
             const DAY_MS = 24 * 60 * 60 * 1000;
             const now = Date.now();
+            const todayKey = getTodayDateKey();
 
-            titleEl.innerText = scope === 'amar'
-                ? "📜 My Bet — Amar Duniya (आज के दांव व AI पर्ची)"
-                : "📝 My Bet — शुभ / धन लक्ष्मी (आज के चालू दांव)";
+            if (currentMyBetScope === 'amar') {
+                luckTabs.classList.add('hidden');
+                titleEl.innerText = "📜 My Bet — Amar Duniya (लाइव दांव व पर्ची)";
+            } else {
+                luckTabs.classList.remove('hidden');
+                titleEl.innerText = currentMyBetLuckSubTab === 'shubh'
+                    ? "⭐ My Bet — शुभ लक्ष्मी (15 मिनट)"
+                    : "💰 My Bet — धन लक्ष्मी (30 मिनट)";
+            }
 
             let allMine = (userBetHistory[activeUserPhone] || []).filter(b => {
-                let isAmarItem = (b.scope === 'amar') || Boolean(b.marketId) || (b.lottery && !String(b.lottery).includes('लक्ष्मी'));
-                let matchesScope = (scope === 'amar') ? isAmarItem : !isAmarItem;
-                return matchesScope && ((now - (b.createdAt || now)) <= (2 * DAY_MS));
+                let lotStr = String(b.lottery || b.marketName || '');
+                let isAmarItem = (b.scope === 'amar') || Boolean(b.marketId) || (!lotStr.includes('शुभ') && !lotStr.includes('धन'));
+                if (currentMyBetScope === 'amar') return isAmarItem;
+                if (isAmarItem) return false;
+                if (currentMyBetLuckSubTab === 'shubh') return lotStr.includes('शुभ');
+                return lotStr.includes('धन');
             });
 
-            let todayBets = allMine.filter(b => (now - (b.createdAt || now)) <= DAY_MS);
-            let yesterday24HrBets = allMine.filter(b => (now - (b.createdAt || now)) > DAY_MS && (now - (b.createdAt || now)) <= (2 * DAY_MS));
+            let todayBets = allMine.filter(b => (b.dateKey === todayKey) || (!b.dateKey && (now - (b.createdAt || now)) <= DAY_MS));
+            let historyBets = allMine.filter(b => !todayBets.includes(b) && ((now - (b.createdAt || now)) <= (7 * DAY_MS)));
+
+            let totalStaked = todayBets.reduce((s, x) => s + (Number(x.points) || 0), 0);
+            let totalWon = todayBets.reduce((s, x) => s + (Number(x.totalWonPoints || x.wonPoints) || 0), 0);
+            let liveCount = todayBets.filter(x => !isBetSlipFinished(x)).length;
+
+            if (sumEl) {
+                sumEl.innerHTML = `
+                    <div class="mybet-sum-item"><span>🟢 लाइव दांव</span><b>${liveCount}</b></div>
+                    <div class="mybet-sum-item"><span>💰 आज लगाया</span><b>${totalStaked} Pts</b></div>
+                    <div class="mybet-sum-item"><span>🏆 आज जीता (Win)</span><b style="color:#4ade80;">+${totalWon} Pts</b></div>
+                `;
+            }
 
             if (todayBets.length === 0) {
-                container.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:12px;">आज कोई दांव या पर्ची दर्ज नहीं है।</p>`;
+                let emptyLabel = currentMyBetScope === 'amar'
+                    ? 'Amar Duniya में आज कोई दांव नहीं लगा है।'
+                    : (currentMyBetLuckSubTab === 'shubh' ? 'शुभ लक्ष्मी में आज कोई दांव नहीं लगा है।' : 'धन लक्ष्मी में आज कोई दांव नहीं लगा है।');
+                container.innerHTML = `<p style="color:#94a3b8; text-align:center; padding:16px; font-size:0.86rem;">${emptyLabel}</p>`;
             } else {
                 container.innerHTML = todayBets.map(formatStructuredMyBetCard).join('');
             }
 
-            if (yesterday24HrBets.length === 0) {
-                yBox.innerHTML = `<p style="color:#94a3b8; font-size:0.78rem; text-align:center; padding:8px;">कल के दांव/पर्चियाँ 24 घंटे तक यहाँ जमा रहती हैं (अभी कोई रिकॉर्ड नहीं)।</p>`;
+            if (historyBets.length === 0) {
+                yBox.innerHTML = `<p style="color:#94a3b8; font-size:0.78rem; text-align:center; padding:8px;">History में कोई पुराना दांव नहीं है।</p>`;
             } else {
-                yBox.innerHTML = yesterday24HrBets.map(formatStructuredMyBetCard).join('');
+                yBox.innerHTML = historyBets.map(formatStructuredMyBetCard).join('');
             }
+        }
 
-            modal.classList.remove('hidden');
+        function openMyBetsHistory(scope = 'luck') {
+            currentMyBetScope = scope;
+            if (scope === 'luck') {
+                currentMyBetLuckSubTab = currentType || 'shubh';
+            }
+            const yBox = document.getElementById('my-bets-yesterday-24hr');
+            const arrow = document.getElementById('mybet-history-toggle-arrow');
+            if (yBox) yBox.classList.add('hidden');
+            if (arrow) arrow.innerText = '▼ खोलें';
+
+            switchMyBetLuckSubTab(currentMyBetLuckSubTab);
+            document.getElementById('my-bets-modal').classList.remove('hidden');
         }
 
         function closeMyBetsHistory() { document.getElementById('my-bets-modal').classList.add('hidden'); }
@@ -4922,7 +5112,7 @@ DOCTYPE html>
             if (!btn || !desc) return;
             if (isAutoRandomActive) {
                 btn.innerText = '🛑 STOP AUTO'; btn.style.background = '#ff4444';
-                desc.innerText = 'स्टेटस: चालू (स्लॉट चाबी से एक जैसा रिजल्ट • एडमिन लॉक का सम्मान)';
+                desc.innerText = 'स्टेटस: चालू (30% लोड प्रॉफिट सेफ्टी • पूरे भारत में एक जैसा रिजल्ट)';
             } else {
                 btn.innerText = '▶️ START AUTO'; btn.style.background = '#28a745';
                 desc.innerText = 'स्टेटस: रुका हुआ';
