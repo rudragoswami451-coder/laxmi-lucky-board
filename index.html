@@ -1,4 +1,4 @@
-YPE html>
+<!DOCTYPE html>
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
@@ -1590,7 +1590,7 @@ YPE html>
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const MORNING_CLOSED_MSG = "मिलते हैं दोस्त सुबह...";
+        const MORNING_CLOSED_MSG = "बंद • सुबह 9:00 बजे चालू होगा";
 
         function getIndiaNow() {
             const istStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
@@ -1882,73 +1882,56 @@ YPE html>
         let qrTimerInterval = null;
         let qrTimeRemaining = 300;
 
-        // लगातार 15-15 मिनट के स्लॉट (09:00 AM से 08:00 PM तक — बीच में कोई गैप नहीं)
+        // शुभ लक्ष्मी 15-15 मिनट के स्लॉट (हर घंटे :00-:15 और :30-:45, सुबह 09:00 AM से रात 11:15 PM तक)
         let defaultShubhSlots = [
             { start: "09:00 AM", display: "—", end: "09:15 AM", stage: "pending", adminLocked: false },
-            { start: "09:15 AM", display: "—", end: "09:30 AM", stage: "pending", adminLocked: false },
             { start: "09:30 AM", display: "—", end: "09:45 AM", stage: "pending", adminLocked: false },
-            { start: "09:45 AM", display: "—", end: "10:00 AM", stage: "pending", adminLocked: false },
             { start: "10:00 AM", display: "—", end: "10:15 AM", stage: "pending", adminLocked: false },
-            { start: "10:15 AM", display: "—", end: "10:30 AM", stage: "pending", adminLocked: false },
             { start: "10:30 AM", display: "—", end: "10:45 AM", stage: "pending", adminLocked: false },
-            { start: "10:45 AM", display: "—", end: "11:00 AM", stage: "pending", adminLocked: false },
             { start: "11:00 AM", display: "—", end: "11:15 AM", stage: "pending", adminLocked: false },
-            { start: "11:15 AM", display: "—", end: "11:30 AM", stage: "pending", adminLocked: false },
             { start: "11:30 AM", display: "—", end: "11:45 AM", stage: "pending", adminLocked: false },
-            { start: "11:45 AM", display: "—", end: "12:00 PM", stage: "pending", adminLocked: false },
             { start: "12:00 PM", display: "—", end: "12:15 PM", stage: "pending", adminLocked: false },
-            { start: "12:15 PM", display: "—", end: "12:30 PM", stage: "pending", adminLocked: false },
             { start: "12:30 PM", display: "—", end: "12:45 PM", stage: "pending", adminLocked: false },
-            { start: "12:45 PM", display: "—", end: "01:00 PM", stage: "pending", adminLocked: false },
             { start: "01:00 PM", display: "—", end: "01:15 PM", stage: "pending", adminLocked: false },
-            { start: "01:15 PM", display: "—", end: "01:30 PM", stage: "pending", adminLocked: false },
             { start: "01:30 PM", display: "—", end: "01:45 PM", stage: "pending", adminLocked: false },
-            { start: "01:45 PM", display: "—", end: "02:00 PM", stage: "pending", adminLocked: false },
             { start: "02:00 PM", display: "—", end: "02:15 PM", stage: "pending", adminLocked: false },
-            { start: "02:15 PM", display: "—", end: "02:30 PM", stage: "pending", adminLocked: false },
             { start: "02:30 PM", display: "—", end: "02:45 PM", stage: "pending", adminLocked: false },
-            { start: "02:45 PM", display: "—", end: "03:00 PM", stage: "pending", adminLocked: false },
             { start: "03:00 PM", display: "—", end: "03:15 PM", stage: "pending", adminLocked: false },
-            { start: "03:15 PM", display: "—", end: "03:30 PM", stage: "pending", adminLocked: false },
             { start: "03:30 PM", display: "—", end: "03:45 PM", stage: "pending", adminLocked: false },
-            { type: "lunch", display: "🍽️ BREAK TIME (भोजन अवकाश)", timeRange: "03:45 PM से 04:30 PM तक" },
+            { start: "04:00 PM", display: "—", end: "04:15 PM", stage: "pending", adminLocked: false },
             { start: "04:30 PM", display: "—", end: "04:45 PM", stage: "pending", adminLocked: false },
-            { start: "04:45 PM", display: "—", end: "05:00 PM", stage: "pending", adminLocked: false },
             { start: "05:00 PM", display: "—", end: "05:15 PM", stage: "pending", adminLocked: false },
-            { start: "05:15 PM", display: "—", end: "05:30 PM", stage: "pending", adminLocked: false },
             { start: "05:30 PM", display: "—", end: "05:45 PM", stage: "pending", adminLocked: false },
-            { start: "05:45 PM", display: "—", end: "06:00 PM", stage: "pending", adminLocked: false },
             { start: "06:00 PM", display: "—", end: "06:15 PM", stage: "pending", adminLocked: false },
-            { start: "06:15 PM", display: "—", end: "06:30 PM", stage: "pending", adminLocked: false },
             { start: "06:30 PM", display: "—", end: "06:45 PM", stage: "pending", adminLocked: false },
-            { start: "06:45 PM", display: "—", end: "07:00 PM", stage: "pending", adminLocked: false },
             { start: "07:00 PM", display: "—", end: "07:15 PM", stage: "pending", adminLocked: false },
-            { start: "07:15 PM", display: "—", end: "07:30 PM", stage: "pending", adminLocked: false },
             { start: "07:30 PM", display: "—", end: "07:45 PM", stage: "pending", adminLocked: false },
-            { start: "07:45 PM", display: "—", end: "08:00 PM", stage: "pending", adminLocked: false }
+            { start: "08:00 PM", display: "—", end: "08:15 PM", stage: "pending", adminLocked: false },
+            { start: "08:30 PM", display: "—", end: "08:45 PM", stage: "pending", adminLocked: false },
+            { start: "09:00 PM", display: "—", end: "09:15 PM", stage: "pending", adminLocked: false },
+            { start: "09:30 PM", display: "—", end: "09:45 PM", stage: "pending", adminLocked: false },
+            { start: "10:00 PM", display: "—", end: "10:15 PM", stage: "pending", adminLocked: false },
+            { start: "10:30 PM", display: "—", end: "10:45 PM", stage: "pending", adminLocked: false },
+            { start: "11:00 PM", display: "—", end: "11:15 PM", stage: "pending", adminLocked: false }
         ];
 
-        // लगातार 30-30 मिनट के स्लॉट (10:00 AM से 08:00 PM तक — बीच में कोई गैप नहीं)
+        // धन लक्ष्मी 30-30 मिनट के स्लॉट (हर घंटे :00-:30, सुबह 09:00 AM से रात 11:30 PM तक)
         let defaultDhanSlots = [
+            { start: "09:00 AM", display: "—", end: "09:30 AM", stage: "pending", adminLocked: false },
             { start: "10:00 AM", display: "—", end: "10:30 AM", stage: "pending", adminLocked: false },
-            { start: "10:30 AM", display: "—", end: "11:00 AM", stage: "pending", adminLocked: false },
             { start: "11:00 AM", display: "—", end: "11:30 AM", stage: "pending", adminLocked: false },
-            { start: "11:30 AM", display: "—", end: "12:00 PM", stage: "pending", adminLocked: false },
             { start: "12:00 PM", display: "—", end: "12:30 PM", stage: "pending", adminLocked: false },
-            { start: "12:30 PM", display: "—", end: "01:00 PM", stage: "pending", adminLocked: false },
             { start: "01:00 PM", display: "—", end: "01:30 PM", stage: "pending", adminLocked: false },
-            { start: "01:30 PM", display: "—", end: "02:00 PM", stage: "pending", adminLocked: false },
             { start: "02:00 PM", display: "—", end: "02:30 PM", stage: "pending", adminLocked: false },
-            { start: "02:30 PM", display: "—", end: "03:00 PM", stage: "pending", adminLocked: false },
             { start: "03:00 PM", display: "—", end: "03:30 PM", stage: "pending", adminLocked: false },
-            { type: "lunch", display: "🍽️ BREAK TIME (भोजन अवकाश)", timeRange: "03:30 PM से 04:30 PM तक" },
-            { start: "04:30 PM", display: "—", end: "05:00 PM", stage: "pending", adminLocked: false },
+            { start: "04:00 PM", display: "—", end: "04:30 PM", stage: "pending", adminLocked: false },
             { start: "05:00 PM", display: "—", end: "05:30 PM", stage: "pending", adminLocked: false },
-            { start: "05:30 PM", display: "—", end: "06:00 PM", stage: "pending", adminLocked: false },
             { start: "06:00 PM", display: "—", end: "06:30 PM", stage: "pending", adminLocked: false },
-            { start: "06:30 PM", display: "—", end: "07:00 PM", stage: "pending", adminLocked: false },
             { start: "07:00 PM", display: "—", end: "07:30 PM", stage: "pending", adminLocked: false },
-            { start: "07:30 PM", display: "—", end: "08:00 PM", stage: "pending", adminLocked: false }
+            { start: "08:00 PM", display: "—", end: "08:30 PM", stage: "pending", adminLocked: false },
+            { start: "09:00 PM", display: "—", end: "09:30 PM", stage: "pending", adminLocked: false },
+            { start: "10:00 PM", display: "—", end: "10:30 PM", stage: "pending", adminLocked: false },
+            { start: "11:00 PM", display: "—", end: "11:30 PM", stage: "pending", adminLocked: false }
         ];
 
         let shubhSlotData = JSON.parse(JSON.stringify(defaultShubhSlots));
@@ -1966,6 +1949,15 @@ YPE html>
         function getTodayDateKey() {
             let d = getIndiaNow();
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function isLotteryClosedNow(typeOverride = null) {
+            let now = getIndiaNow();
+            let currentMins = now.getHours() * 60 + now.getMinutes();
+            let t = typeOverride || currentType;
+            let closeEndMins = (t === 'shubh') ? timeStrToMins("11:15 PM") : timeStrToMins("11:30 PM");
+            let openStartMins = timeStrToMins("09:00 AM");
+            return (currentMins < openStartMins || currentMins >= closeEndMins);
         }
 
         function checkAndPerform1AMDailyReset() {
@@ -3317,7 +3309,7 @@ YPE html>
             }
 
             let activeInfo = getCurrentActiveSlotObject();
-            if (currentMins >= timeStrToMins("08:00 PM")) {
+            if (isLotteryClosedNow()) {
                 labelEl.innerText = MORNING_CLOSED_MSG;
                 valEl.innerText = MORNING_CLOSED_MSG;
                 subEl.innerText = MORNING_CLOSED_MSG;
@@ -3379,6 +3371,31 @@ YPE html>
             db.ref('helpRequests').on('value', (snap) => {
                 if (snap.exists()) helpRequests = snap.val();
                 if (!document.getElementById('admin-section').classList.contains('hidden')) renderAdminHelpRequests();
+            });
+
+            db.ref('globalLockedResults/' + getTodayDateKey()).on('value', (snap) => {
+                if (!snap.exists()) return;
+                const gData = snap.val();
+                ['shubh', 'dhan'].forEach(lType => {
+                    if (!gData[lType]) return;
+                    let targetList = lType === 'shubh' ? shubhSlotData : dhanSlotData;
+                    Object.keys(gData[lType]).forEach(idxKey => {
+                        let idx = parseInt(idxKey);
+                        let entry = gData[lType][idxKey];
+                        if (!targetList[idx] || !entry) return;
+                        if (entry.final && targetList[idx].stage !== 'closed_declared') {
+                            targetList[idx].display = `<span class='unique-result-badge'>${entry.final}</span>`;
+                            targetList[idx].stage = 'closed_declared';
+                            targetList[idx].adminLocked = true;
+                        } else if (entry.open && targetList[idx].stage === 'pending') {
+                            targetList[idx].openData = entry.open;
+                            targetList[idx].display = `<span class='open-pill-glow'>OPEN</span> <span class='unique-result-badge'>${entry.open}</span>`;
+                            targetList[idx].stage = 'open_declared';
+                        }
+                    });
+                });
+                renderResults();
+                updateLiveSpotlightBanner();
             });
 
             db.ref('shubhSlots').on('value', (snap) => {
@@ -3726,7 +3743,7 @@ YPE html>
             let now = getIndiaNow();
             let currentMins = now.getHours() * 60 + now.getMinutes();
             let currentSecs = now.getSeconds();
-            if (currentMins >= timeStrToMins("08:00 PM")) {
+            if (isLotteryClosedNow()) {
                 alert(MORNING_CLOSED_MSG);
                 return;
             }
@@ -4626,7 +4643,7 @@ YPE html>
             let currentMins = now.getHours() * 60 + now.getMinutes();
             let currentSecs = now.getSeconds();
 
-            if (currentMins >= timeStrToMins("08:00 PM")) {
+            if (isLotteryClosedNow()) {
                 document.getElementById('countdown').innerText = "CLOSED";
                 document.getElementById('admin-countdown').innerText = "CLOSED";
                 document.getElementById('timer-status-hint').innerText = MORNING_CLOSED_MSG;
@@ -4637,17 +4654,36 @@ YPE html>
             let activeInfo = getCurrentActiveSlotObject();
             let slot = activeInfo.slot;
             let maxMins = activeInfo.durationMins;
+            let startMins = timeStrToMins(slot.start);
             let endMins = timeStrToMins(slot.end);
-            let totalSecondsLeft = Math.max(0, (endMins - currentMins) * 60 - currentSecs);
 
-            // ठीक 15:00 या 30:00 के दायरे में टाइमर दिखाएं
+            const timerEl = document.getElementById('countdown');
+            const timerBoxEl = document.getElementById('main-timer-box');
+
+            // यदि अभी बीच का ब्रेक/गैप चल रहा है (अगला स्लॉट शुरू होने में समय है)
+            if (currentMins < startMins) {
+                let waitSeconds = Math.max(0, (startMins - currentMins) * 60 - currentSecs);
+                let cappedWait = Math.min(maxMins * 60, waitSeconds);
+                let wMins = Math.floor(cappedWait / 60);
+                let wSecs = cappedWait % 60;
+                let waitStr = `${String(wMins).padStart(2, '0')}:${String(wSecs).padStart(2, '0')}`;
+
+                timerEl.innerText = waitStr;
+                document.getElementById('admin-countdown').innerText = waitStr;
+                timerEl.classList.remove('red-lock');
+                if (timerBoxEl) timerBoxEl.classList.remove('locked-alert');
+                setLuckCategoryCardsLockState(false);
+                document.getElementById('timer-status-hint').innerText = `⏳ अगला खेल (${slot.start} - ${slot.end}) शुरू होने में समय • बुकिंग खुली है`;
+                return;
+            }
+
+            // सक्रिय खेल का समय (15 मिनट या 30 मिनट)
+            let totalSecondsLeft = Math.max(0, (endMins - currentMins) * 60 - currentSecs);
             let cappedSeconds = Math.min(maxMins * 60, totalSecondsLeft);
             let minsLeft = Math.floor(cappedSeconds / 60);
             let secsLeft = cappedSeconds % 60;
             let timeStr = `${String(minsLeft).padStart(2, '0')}:${String(secsLeft).padStart(2, '0')}`;
 
-            const timerEl = document.getElementById('countdown');
-            const timerBoxEl = document.getElementById('main-timer-box');
             timerEl.innerText = timeStr;
             document.getElementById('admin-countdown').innerText = timeStr;
 
