@@ -730,10 +730,10 @@ DOCTYPE html>
                 </div>
             </div>
 
-            <div class="amar-marquee">
-                <marquee behavior="scroll" direction="left" scrollamount="5">
+            <div class="amar-marquee" style="overflow:hidden; white-space:nowrap;">
+                <div style="display:inline-block; padding-left:100%; animation:amarTickerScroll 18s linear infinite;">
                     🔥 Trusted Matka Play App 🔥 सभी मटका बाजार खेलो ऑनलाइन | Fast Payin - Instant Withdraw 💸📲 — खेलो दिल से बेफ़िकर | सहायता सेवा उपलब्ध
-                </marquee>
+                </div>
             </div>
         </div>
 
@@ -1367,8 +1367,9 @@ DOCTYPE html>
         const MORNING_CLOSED_MSG = "बंद • रात 11:30 के बाद बंद, सुबह 9:00 बजे चालू होगा";
 
         function getIndiaNow() {
-            const istStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-            return new Date(istStr);
+            const now = new Date();
+            const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+            return new Date(utcMs + (5.5 * 3600000));
         }
 
         function getCurrentSessionPhone() {
@@ -2068,6 +2069,7 @@ DOCTYPE html>
         }
 
         function submitLuckJodiInlineBets() {
+            if (isBetSubmitLocked()) return;
             clearInlineFeedback("board-feedback");
             if (!activeUserPhone) { setInlineFeedback("board-feedback", "कृपया पहले लॉगिन करें!", "error"); return; }
             if (isLotteryClosedNow()) { setInlineFeedback("board-feedback", MORNING_CLOSED_MSG, "error"); return; }
@@ -2409,6 +2411,7 @@ DOCTYPE html>
         }
 
         function confirmAmarWhiteParchiOK() {
+            if (isBetSubmitLocked()) return;
             if (!draftWhiteParchi || !draftWhiteParchi.items.length) return;
             if (!activeUserPhone) { setInlineFeedback("ai-parchi-feedback", "पहले लॉगिन करें!", "error"); return; }
 
@@ -2846,6 +2849,7 @@ DOCTYPE html>
         }
 
         function submitAmarSingleGridBets() {
+            if (isBetSubmitLocked()) return;
             clearInlineFeedback("amar-board-feedback");
             let m = AMAR_MARKETS_CONFIG.find(x => x.id === selectedAmarMarketId);
             if (!m) return;
@@ -2935,6 +2939,7 @@ DOCTYPE html>
         }
 
         function submitAmarAddedBets() {
+            if (isBetSubmitLocked()) return;
             clearInlineFeedback("amar-board-feedback");
             let m = AMAR_MARKETS_CONFIG.find(x => x.id === selectedAmarMarketId);
             if (!m) return;
@@ -3945,15 +3950,15 @@ DOCTYPE html>
                 if (s.type === 'lunch') continue;
                 let stM = timeStrToMins(s.start);
                 let enM = timeStrToMins(s.end);
-                if (currentMins >= stM && currentMins < enM) return { slot: s, index: i };
+                if (currentMins >= stM && currentMins < enM) return { slot: s, index: i, phase: 'running' };
             }
             for (let i = 0; i < slotsList.length; i++) {
                 let s = slotsList[i];
                 if (s.type === 'lunch') continue;
-                if (currentMins < timeStrToMins(s.start)) return { slot: s, index: i };
+                if (currentMins < timeStrToMins(s.start)) return { slot: s, index: i, phase: 'upcoming' };
             }
             let lastPlayableIdx = slotsList.length - 1;
-            return { slot: slotsList[lastPlayableIdx], index: lastPlayableIdx };
+            return { slot: slotsList[lastPlayableIdx], index: lastPlayableIdx, phase: 'ended' };
         }
 
         function isCurrentSlotTimeLocked() {
@@ -3965,8 +3970,15 @@ DOCTYPE html>
             let stM = timeStrToMins(s.start);
             let enM = timeStrToMins(s.end);
             let curM = now.getHours() * 60 + now.getMinutes();
-            let secsToEnd = (enM - curM) * 60 - secs;
-            return (curM >= stM && curM < enM && secsToEnd <= 60);
+            if (curM >= stM && curM < enM) {
+                let secsToEnd = (enM - curM) * 60 - secs;
+                return secsToEnd <= 60;
+            }
+            if (curM < stM) {
+                let secsToStart = (stM - curM) * 60 - secs;
+                return secsToStart <= 60;
+            }
+            return false;
         }
 
         function updateGameCardsLockState() {
@@ -3988,12 +4000,15 @@ DOCTYPE html>
             });
         }
 
+        let lastAmarGridMinuteKey = "";
+
         function updateTimers() {
             checkAndPerform1AMDailyReset();
             checkAndTriggerAutoResults();
 
             let now = getIndiaNow();
             let secs = now.getSeconds();
+            let curM = now.getHours() * 60 + now.getMinutes();
             let activeInfo = getCurrentActiveSlotObject();
             let slot = activeInfo.slot;
             let closedNow = isLotteryClosedNow();
@@ -4010,9 +4025,11 @@ DOCTYPE html>
                 if (hintEl) hintEl.innerText = MORNING_CLOSED_MSG;
                 if (tBox) tBox.classList.remove('locked-alert');
             } else if (slot) {
+                let stM = timeStrToMins(slot.start);
                 let endM = timeStrToMins(slot.end);
-                let curM = now.getHours() * 60 + now.getMinutes();
-                let remSec = Math.max(0, (endM - curM) * 60 - secs);
+                let isUpcoming = (curM < stM);
+                let targetM = isUpcoming ? stM : endM;
+                let remSec = Math.max(0, (targetM - curM) * 60 - secs);
                 let mm = String(Math.floor(remSec / 60)).padStart(2, '0');
                 let ss = String(remSec % 60).padStart(2, '0');
                 let timeStr = `${mm}:${ss}`;
@@ -4023,11 +4040,19 @@ DOCTYPE html>
                 if (locked1Min) {
                     if (cdEl) cdEl.classList.add('red-lock');
                     if (tBox) tBox.classList.add('locked-alert');
-                    if (hintEl) hintEl.innerText = `🔒 अंतिम 1 मिनट लॉक — स्लॉट ${slot.start} - ${slot.end}`;
+                    if (hintEl) {
+                        hintEl.innerText = isUpcoming
+                            ? `🔒 ओपन से 1 मिनट पहले लॉक — ${slot.start} ओपन जल्द`
+                            : `🔒 अंतिम 1 मिनट लॉक — स्लॉट ${slot.start} - ${slot.end}`;
+                    }
                 } else {
                     if (cdEl) cdEl.classList.remove('red-lock');
                     if (tBox) tBox.classList.remove('locked-alert');
-                    if (hintEl) hintEl.innerText = `सक्रिय स्लॉट: ${slot.start} - ${slot.end}`;
+                    if (hintEl) {
+                        hintEl.innerText = isUpcoming
+                            ? `⏳ अगला ओपन (${slot.start}) शुरू होने में समय • स्लॉट: ${slot.start} - ${slot.end}`
+                            : `🟢 क्लोज़ टाइमर (${slot.end}) • सक्रिय स्लॉट: ${slot.start} - ${slot.end}`;
+                    }
                 }
 
                 if (isGoodLuckMainScreenActive() && remSec > 0 && remSec <= 10) {
@@ -4037,8 +4062,15 @@ DOCTYPE html>
 
             updateGameCardsLockState();
             updateLiveSpotlightBanner();
-            renderAmarMarketsGrid();
-            updateAdminBadgesAndLiveUsers();
+
+            let amarMinKey = `${now.getHours()}:${now.getMinutes()}`;
+            if (lastAmarGridMinuteKey !== amarMinKey) {
+                lastAmarGridMinuteKey = amarMinKey;
+                if (!document.getElementById('amar-duniya-section').classList.contains('hidden')) {
+                    renderAmarMarketsGrid();
+                }
+                updateAdminBadgesAndLiveUsers();
+            }
         }
 
         function renderResults() {
@@ -4153,7 +4185,16 @@ DOCTYPE html>
             badge.innerText = `सक्रिय स्लॉट: ${s.start} - ${s.end} (${stg})`;
         }
 
+        let lastBetActionTimestamp = 0;
+        function isBetSubmitLocked() {
+            const now = Date.now();
+            if (now - lastBetActionTimestamp < 1200) return true;
+            lastBetActionTimestamp = now;
+            return false;
+        }
+
         function submitLuckSingleGridBets() {
+            if (isBetSubmitLocked()) return;
             clearInlineFeedback("board-feedback");
             if (!activeUserPhone) return;
             if (isLotteryClosedNow()) { setInlineFeedback("board-feedback", MORNING_CLOSED_MSG, "error"); return; }
@@ -4209,6 +4250,7 @@ DOCTYPE html>
         }
 
         function submitBoardBet() {
+            if (isBetSubmitLocked()) return;
             clearInlineFeedback("board-feedback");
             if (!activeUserPhone) return;
             if (isLotteryClosedNow()) { setInlineFeedback("board-feedback", MORNING_CLOSED_MSG, "error"); return; }
@@ -5344,8 +5386,15 @@ DOCTYPE html>
         initializeFirebaseListeners();
         applySessionState();
         switchLottery('shubh');
-        updateTimers();
-        setInterval(updateTimers, 1000);
+        (function startAlignedSecondTimer() {
+            updateTimers();
+            const delay = 1000 - (Date.now() % 1000);
+            setTimeout(function tick() {
+                updateTimers();
+                const nextDelay = 1000 - (Date.now() % 1000);
+                setTimeout(tick, Math.max(200, nextDelay));
+            }, delay);
+        })();
         setInterval(heartbeatUserPresence, 30000);
     </script>
 </body>
