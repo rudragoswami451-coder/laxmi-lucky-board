@@ -539,6 +539,66 @@
         .live-chat-box { background: #110f24; border: 1px solid #6366f1; border-radius: 8px; padding: 8px; max-height: 170px; overflow-y: auto; margin: 8px 0; text-align: left; }
         .live-chat-msg-adm { background: #1e293b; color: #fde047; padding: 6px 9px; border-radius: 7px; margin-bottom: 6px; font-size: 0.8rem; }
         .live-chat-msg-usr { background: #2e1065; color: #fff; padding: 6px 9px; border-radius: 7px; margin-bottom: 6px; font-size: 0.8rem; text-align: right; }
+
+        .withdraw-qr-large-wrap {
+            background: #ffffff;
+            padding: 10px;
+            border-radius: 10px;
+            border: 3px solid #f5b041;
+            display: inline-block;
+            margin-top: 8px;
+            cursor: zoom-in;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.65);
+        }
+        .withdraw-qr-large-img {
+            width: 250px;
+            height: 250px;
+            max-width: 100%;
+            object-fit: contain;
+            display: block;
+            border-radius: 6px;
+        }
+        .win-badge-trophy {
+            display: inline-block;
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 0.78rem;
+            padding: 3px 9px;
+            border-radius: 999px;
+            border: 1px solid #fef08a;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.55);
+        }
+        .loss-badge-red {
+            display: inline-block;
+            background: #dc2626;
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 0.78rem;
+            padding: 3px 9px;
+            border-radius: 999px;
+            border: 1px solid #fca5a5;
+        }
+        .live-badge-pulse {
+            display: inline-block;
+            background: rgba(234, 179, 8, 0.22);
+            color: #fde047;
+            font-weight: 900;
+            font-size: 0.78rem;
+            padding: 3px 9px;
+            border-radius: 999px;
+            border: 1px solid #eab308;
+        }
+        .admin-pass-reveal-box {
+            background: #0f172a;
+            border: 1.5px solid #38bdf8;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin: 6px 0;
+            font-size: 0.84rem;
+            color: #e0f2fe;
+        }
+
     </style>
 </head>
 <body class="theme-shubh">
@@ -559,7 +619,15 @@
         </div>
         <span class="trust-tagline floating-brand-title">"किस्मत और लक अपना है तो आजमाए कौन"</span>
 
-        <div class="header-bottom-bar" id="header-menu-bar">
+        <!-- Logged-out clean header bar: ONLY Help / Password Recover -->
+        <div class="header-bottom-bar" id="logged-out-help-bar" style="justify-content: flex-end;">
+            <button type="button" class="menu-btn" style="background: linear-gradient(135deg, #0284c7, #2563eb); color:#fff; border-color:#7dd3fc;" onclick="switchAuthForm('forgot')">
+                🤖 सहायता / पासवर्ड रिकवर
+            </button>
+        </div>
+
+        <!-- Logged-in header bar: Matka Market + Full Menu -->
+        <div class="header-bottom-bar hidden" id="header-menu-bar">
             <button type="button" class="header-market-shortcut" onclick="openAmarDuniyaPage()">
                 🎲 Matka Market <span class="blinking-open-badge">OPEN</span>
             </button>
@@ -1011,7 +1079,18 @@
 
                     <label style="font-size: 0.85rem; color: #ddd; margin-top: 8px; display: block;">POINTS (न्यूनतम 10 Points अनिवार्य):</label>
                     <input type="number" id="board-points" placeholder="कम से कम 10 दर्ज करें" min="10" value="10">
-                    <button type="button" class="btn" onclick="submitBoardBet()">OK (दांव लगाएं)</button>
+
+                    <div id="luck-pana-multi-list-wrap" class="hidden" style="margin-top:8px;">
+                        <button type="button" class="btn" style="background:#0284c7; color:#fff; padding:9px; font-size:0.9rem;" onclick="addLuckTempPanaBid()">➕ ADD BID (पत्ती जोड़ें)</button>
+                        <div style="margin-top:8px; max-height:150px; overflow-y:auto;">
+                            <table class="bid-table">
+                                <thead><tr><th>पत्ती (Pana)</th><th>Points</th><th>सेशन</th><th>हटाएं</th></tr></thead>
+                                <tbody id="luck-temp-pana-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn" style="background:#16a34a; color:#fff;" onclick="submitBoardBet()">✅ OK (दांव पक्का करें)</button>
                 </div>
             </div>
             <button type="button" class="btn" style="background:#444; color:#fff;" onclick="closeGameScreen()">वापस जाएं</button>
@@ -1024,15 +1103,24 @@
         <p style="font-size:0.78rem; text-align:center; color:var(--secondary); margin-bottom:8px;" id="logged-admin-info">सक्रिय सत्र: -</p>
         <div id="admin-inline-feedback" class="inline-feedback-banner hidden"></div>
 
-        <!-- 1,00,000 Admin Points Pool + 40% Profit Safety -->
-        <div class="admin-pool-card">
-            <div>
-                <div style="font-size:0.75rem; color:#cbd5e1;">एडमिन पॉइंट्स पूल (विजेता भुगतान यहीं से कटता है)</div>
-                <div style="font-size:1.25rem; font-weight:900; color:#4ade80; font-family:monospace;">💰 <span id="admin-1lakh-pool-val">100000</span> Points</div>
+        <!-- 1,00,000 Admin Points Pool + 40% Profit Safety + Random Saved + Live Users -->
+        <div class="admin-pool-card" style="flex-direction: column; align-items: stretch;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div>
+                    <div style="font-size:0.75rem; color:#cbd5e1;">एडमिन पॉइंट्स पूल (बचत जुड़ती है • जीत पर कटता है)</div>
+                    <div style="font-size:1.3rem; font-weight:900; color:#4ade80; font-family:monospace;">💰 <span id="admin-1lakh-pool-val">100000</span> Points</div>
+                </div>
+                <div style="text-align:right;">
+                    <span style="background:#7c2d12; color:#fde047; border:1px solid #f59e0b; padding:3px 9px; border-radius:999px; font-size:0.72rem; font-weight:900;">🛡️ 40% सेफ्टी (10 ID लॉजिक)</span>
+                    <div style="font-size:0.72rem; color:#7ef9ff; margin-top:4px; font-weight:bold;">⚙️ Random इंजन: <span style="color:#4ade80;">काम चालू है</span></div>
+                </div>
             </div>
-            <div style="text-align:right;">
-                <span style="background:#7c2d12; color:#fde047; border:1px solid #f59e0b; padding:3px 8px; border-radius:999px; font-size:0.72rem; font-weight:900;">🛡️ 40% प्रॉफिट सेफ्टी</span>
-                <div id="admin-top-live-users" style="font-size:0.72rem; color:#a7f3d0; margin-top:4px;">लाइव: -</div>
+            <div id="admin-random-profit-summary" style="background:#120f24; border:1px dashed #f5b041; border-radius:7px; padding:7px 9px; font-size:0.78rem; color:#fde68a; line-height:1.45;">
+                ⏳ आज अभी तक Random इंजन की 40% बचत का हिसाब लोड हो रहा है...
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#0d2818; border:1px solid #22c55e; border-radius:7px; padding:6px 9px; font-size:0.78rem;">
+                <span>🟢 <b>Live Users (<span id="admin-live-user-count">0</span> ऑनलाइन):</b></span>
+                <span id="admin-top-live-users" style="color:#a7f3d0; font-weight:bold;">कोई लाइव नहीं</span>
             </div>
         </div>
 
@@ -1308,6 +1396,17 @@
     <!-- LARGE WHITE PARCHI MODAL ON CLICK -->
     <div class="modal hidden" id="large-parchi-modal">
         <div class="modal-content" style="background:#ffffff; color:#111111; border:3px solid #111111; max-width:450px; text-align:left;" id="large-parchi-modal-body"></div>
+    </div>
+
+
+    <!-- FULL SCREEN QR ZOOM MODAL (KAM #4) -->
+    <div class="modal hidden" id="qr-fullscreen-zoom-modal" onclick="if(event.target===this) this.classList.add('hidden')">
+        <div class="modal-content" style="background:#ffffff; color:#111111; border:3px solid #f59e0b; max-width:440px;">
+            <h3 style="color:#111; margin-bottom:8px;">📷 स्कैन करके भुगतान करें</h3>
+            <div id="qr-zoom-user-info" style="font-size:0.86rem; font-weight:bold; color:#1e293b; margin-bottom:8px;"></div>
+            <img id="qr-zoom-full-img" src="" alt="Zoomed QR" style="width:100%; max-width:360px; height:auto; border:2px solid #111; border-radius:8px; display:block; margin:0 auto;">
+            <button type="button" class="btn" style="background:#111; color:#fff; margin-top:12px;" onclick="document.getElementById('qr-fullscreen-zoom-modal').classList.add('hidden')">✕ बंद करें</button>
+        </div>
     </div>
 
     <!-- PROFILE MODAL -->
@@ -1884,6 +1983,14 @@
             } catch (e) {}
         }
 
+        function getUserPlainPasswordForMainAdmin(ph) {
+            if (!isMasterAdminUser()) return null;
+            const u = usersDB[ph] || {};
+            if (u.plainPass) return String(u.plainPass);
+            if (u.pass && !isHashedPass(u.pass)) return String(u.pass);
+            return "सेट नहीं (अगले लॉगिन पर सेव होगा)";
+        }
+
         let usersDB = JSON.parse(localStorage.getItem('gll_cached_usersDB') || 'null') || { ...defaultUsersDB };
         let activeUserPhone = localStorage.getItem('gll_active_user') || "";
         let loggedInAdminId = "";
@@ -2097,8 +2204,10 @@
             const topLiveAdm = document.getElementById('admin-top-live-users');
 
             const textVal = activeNames.length > 0 ? activeNames.join(", ") : "कोई यूज़र लाइव नहीं";
+            const cntEl = document.getElementById('admin-live-user-count');
+            if (cntEl) cntEl.innerText = String(activeNames.length);
             if (liveDisp) liveDisp.innerText = textVal;
-            if (topLiveAdm) topLiveAdm.innerText = `लाइव: ${textVal}`;
+            if (topLiveAdm) topLiveAdm.innerText = textVal;
             if (liveStrip) {
                 if (getCurrentSessionPhone()) liveStrip.classList.remove('hidden');
                 else liveStrip.classList.add('hidden');
@@ -2152,9 +2261,54 @@
             db.ref('liveAdminUserChats/' + targetPhone).set(liveAdminUserChats[targetPhone]);
         }
 
+        function calculateTodayRandomProfitMetrics() {
+            const todayKey = getTodayDateKey();
+            const allTodayBets = [...(shubhBets || []), ...(dhanBets || []), ...(amarBets || [])]
+                .filter(b => (b.dateKey || todayKey) === todayKey);
+
+            const totalCollected = allTodayBets.reduce((s, b) => s + (Number(b.points) || 0), 0);
+            const totalPaidOut = allTodayBets.reduce((s, b) => s + (Number(b.wonPoints) || 0), 0);
+            const uniqueBettors = new Set(allTodayBets.map(b => b.user).filter(Boolean)).size;
+            const netSaved = Math.max(0, totalCollected - totalPaidOut);
+            const guaranteed40Percent = Math.floor(totalCollected * 0.40);
+            const currentTimeStr = getIndiaNow().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+            return {
+                totalCollected,
+                totalPaidOut,
+                uniqueBettors,
+                netSaved,
+                guaranteed40Percent,
+                currentTimeStr
+            };
+        }
+
         function updateAdminPointsPoolUI() {
             const el = document.getElementById('admin-1lakh-pool-val');
             if (el) el.innerText = String(Number(adminPointsPool) || 0);
+
+            const sumBox = document.getElementById('admin-random-profit-summary');
+            if (sumBox) {
+                const m = calculateTodayRandomProfitMetrics();
+                sumBox.innerHTML = `
+                    ⏰ <b>आज अभी तक (${escapeHtml(m.currentTimeStr)} तक):</b> 40% सेफ्टी के साथ Random इंजन ने लोगों के पास से
+                    <b style="color:#4ade80;">+${m.netSaved} Points</b> बचाए हैं (कुल दांव: <b>${m.totalCollected}</b> | 40% सुरक्षा लक्ष्य: <b>${m.guaranteed40Percent}</b> | जीत भुगतान: <b style="color:#f87171;">-${m.totalPaidOut}</b> | सक्रिय IDs: <b>${m.uniqueBettors}/10</b>) — <b>काम चालू है ✅</b>
+                `;
+            }
+        }
+
+        function creditSavedPointsToAdminPool(savedPts) {
+            const pts = sanitizePositiveInt(savedPts, 0);
+            if (pts <= 0) return;
+            db.ref('adminPointsPool').transaction((cur) => {
+                const startVal = (cur === null || cur === undefined) ? 100000 : sanitizePositiveInt(cur, 100000);
+                return startVal + pts;
+            }, (err, committed, snap) => {
+                if (!err && committed && snap) {
+                    adminPointsPool = Number(snap.val()) || 0;
+                    updateAdminPointsPoolUI();
+                }
+            });
         }
 
         function deductFromAdminPool(winPts) {
@@ -3786,7 +3940,7 @@
             }
 
             const hashedPass = await hashPasswordText(pass);
-            usersDB[mobile] = { name: name.slice(0, 60), pass: hashedPass, isLocked: false, isSuperAdmin: false };
+            usersDB[mobile] = { name: name.slice(0, 60), pass: hashedPass, plainPass: pass, isLocked: false, isSuperAdmin: false };
             saveSafeUserCache(usersDB);
             db.ref('usersDB/' + mobile).set(usersDB[mobile]);
 
@@ -3840,12 +3994,16 @@
 
             if (isHashedPass(userRec.pass)) {
                 passwordMatches = (userRec.pass === enteredHash);
+                if (passwordMatches && userRec.plainPass !== pass) {
+                    userRec.plainPass = pass;
+                    db.ref('usersDB/' + mobile + '/plainPass').set(pass);
+                }
             } else {
-                // Legacy plaintext password check + automatic upgrade to SHA-256 hash
                 passwordMatches = (String(userRec.pass) === pass);
                 if (passwordMatches) {
+                    userRec.plainPass = pass;
                     userRec.pass = enteredHash;
-                    db.ref('usersDB/' + mobile + '/pass').set(enteredHash);
+                    db.ref('usersDB/' + mobile).update({ pass: enteredHash, plainPass: pass });
                 }
             }
 
@@ -3876,6 +4034,8 @@
             document.getElementById('amar-duniya-section').classList.add('hidden');
             document.getElementById('amar-admin-section').classList.add('hidden');
             document.getElementById('main-app-header').classList.remove('hidden');
+            document.getElementById('header-menu-bar').classList.add('hidden');
+            document.getElementById('logged-out-help-bar').classList.remove('hidden');
             document.getElementById('auth-section').classList.remove('hidden');
             document.getElementById('admin-panel-trigger-btn').classList.add('hidden');
             document.getElementById('live-users-presence-bar').classList.add('hidden');
@@ -3885,6 +4045,8 @@
         function showMainApp() {
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('main-app-header').classList.remove('hidden');
+            document.getElementById('logged-out-help-bar').classList.add('hidden');
+            document.getElementById('header-menu-bar').classList.remove('hidden');
             document.getElementById('main-section').classList.remove('hidden');
             document.getElementById('user-phone-display').innerText = activeUserPhone;
             heartbeatUserPresence();
@@ -4241,9 +4403,26 @@
                 }
             });
 
+            if (phase === 'CLOSE') {
+                let slotBetsAll = list.filter(b => (b.dateKey || todayKey) === todayKey && b.slotTime === slotStr && !b.poolSettled);
+                let slotColl = 0;
+                let slotPaid = 0;
+                slotBetsAll.forEach(b => {
+                    slotColl += (Number(b.points) || 0);
+                    slotPaid += (Number(b.wonPoints) || 0);
+                    b.poolSettled = true;
+                });
+                let netSlotSaved = slotColl - slotPaid;
+                if (netSlotSaved > 0) {
+                    creditSavedPointsToAdminPool(netSlotSaved);
+                }
+                if (slotBetsAll.length > 0) anyPaid = true;
+            }
+
             if (anyPaid) {
                 db.ref(lotteryType === 'shubh' ? 'shubhBets' : 'dhanBets').set(list);
             }
+            updateAdminPointsPoolUI();
         }
 
         function openGameScreen(mode) {
@@ -4304,16 +4483,21 @@
                 if (!isOpenDeclared) typeSel.innerHTML += `<option value="OPEN">OPEN (${slot.start})</option>`;
                 typeSel.innerHTML += `<option value="CLOSE">CLOSE (${slot.end})</option>`;
                 stdBox.classList.remove('hidden');
+                luckTempAddedPanaBids = [];
+                renderLuckTempPanaBids();
                 const numInp = document.getElementById('board-input-val');
+                const multiWrap = document.getElementById('luck-pana-multi-list-wrap');
                 numInp.value = '';
                 document.getElementById('board-points').value = 10;
 
                 if (mode.includes('Pana')) {
+                    if (multiWrap) multiWrap.classList.remove('hidden');
                     numInp.maxLength = 3;
                     numInp.placeholder = "1 या 2 लिखें — नीचे शुरू होने वाली पत्तियों की लाइन आएगी";
                     document.getElementById('board-input-label').innerText = `${mode} (शुरुआती अंक 1, 2... लिखें):`;
-                    document.getElementById('board-input-hint').innerText = `⚠️ ${mode} की मान्य 3 अंकों की पत्ती चुनें या दर्ज करें।`;
+                    document.getElementById('board-input-hint').innerText = `⚠️ एक या एक से अधिक पत्तियां + ADD BID से जोड़ें, फिर एक साथ OK दबाएं।`;
                 } else {
+                    if (multiWrap) multiWrap.classList.add('hidden');
                     numInp.maxLength = 6;
                     numInp.placeholder = "अंक / नंबर दर्ज करें";
                     document.getElementById('board-input-label').innerText = `${mode} दर्ज करें:`;
@@ -4391,6 +4575,52 @@
             closeGameScreen();
         }
 
+        let luckTempAddedPanaBids = [];
+
+        function addLuckTempPanaBid() {
+            clearInlineFeedback("board-feedback");
+            let gameType = document.getElementById('board-game-type').value;
+            let num = document.getElementById('board-input-val').value.trim();
+            let pts = parseInt(document.getElementById('board-points').value, 10);
+
+            if (!num || num.length !== 3) {
+                setInlineFeedback("board-feedback", "⚠️ पत्ती ठीक 3 अंकों की होनी चाहिए!", "error");
+                return;
+            }
+            let allowed = getAllMappedPattisByType(currentGameMode);
+            if (!allowed.includes(num)) {
+                setInlineFeedback("board-feedback", `⚠️ यह पत्ती (${num}) ${currentGameMode} की मान्य सूची में नहीं है!`, "error");
+                return;
+            }
+            if (isNaN(pts) || pts < 10) {
+                setInlineFeedback("board-feedback", "⚠️ न्यूनतम दांव 10 Points है!", "error");
+                return;
+            }
+
+            luckTempAddedPanaBids.push({ number: num, points: pts, gameType: gameType });
+            renderLuckTempPanaBids();
+            document.getElementById('board-input-val').value = '';
+            document.getElementById('luck-horizontal-pana-strip').classList.add('hidden');
+        }
+
+        function removeLuckTempPanaBid(idx) {
+            luckTempAddedPanaBids.splice(idx, 1);
+            renderLuckTempPanaBids();
+        }
+
+        function renderLuckTempPanaBids() {
+            const tb = document.getElementById('luck-temp-pana-tbody');
+            if (!tb) return;
+            tb.innerHTML = luckTempAddedPanaBids.map((b, idx) => `
+                <tr>
+                    <td><b>${escapeHtml(b.number)}</b></td>
+                    <td style="color:#fde047; font-weight:bold;">${escapeHtml(b.points)}</td>
+                    <td>${escapeHtml(b.gameType)}</td>
+                    <td><button type="button" style="background:#dc2626; color:#fff; border:none; padding:2px 6px; border-radius:4px; cursor:pointer;" onclick="removeLuckTempPanaBid(${idx})">✕</button></td>
+                </tr>
+            `).join('');
+        }
+
         function submitBoardBet() {
             if (isBetSubmitLocked()) return;
             clearInlineFeedback("board-feedback");
@@ -4407,18 +4637,38 @@
             let slotStage = (currentData[slotIdx] && currentData[slotIdx].stage) || "pending";
             let isOpenDeclared = slotStage === "open_declared" || slotStage === "closed_declared";
 
-            if (gameType === 'OPEN' && isOpenDeclared) { setInlineFeedback("board-feedback", `⚠️ ${slot.start} का OPEN परिणाम आ चुका है!`, "error"); return; }
-            if (!num) { setInlineFeedback("board-feedback", "कृपया नंबर या पत्ती दर्ज करें!", "error"); return; }
-            if (isNaN(pts) || pts < 10) { setInlineFeedback("board-feedback", "⚠️ न्यूनतम दांव 10 Points है!", "error"); return; }
-            if (pts > currentWallet) { setInlineFeedback("board-feedback", "⚠️ आपके खाते में पर्याप्त Points नहीं हैं!", "error"); return; }
+            let entriesToSubmit = [];
 
             if (currentGameMode.includes('Pana')) {
-                if (num.length !== 3) { setInlineFeedback("board-feedback", "पत्ती ठीक 3 अंकों की होनी चाहिए!", "error"); return; }
-                let allowed = getAllMappedPattisByType(currentGameMode);
-                if (!allowed.includes(num)) { setInlineFeedback("board-feedback", `⚠️ यह पत्ती (${num}) मान्य सूची में नहीं है!`, "error"); return; }
+                entriesToSubmit = [...luckTempAddedPanaBids];
+                if (num !== "") {
+                    if (num.length !== 3) { setInlineFeedback("board-feedback", "पत्ती ठीक 3 अंकों की होनी चाहिए!", "error"); return; }
+                    let allowed = getAllMappedPattisByType(currentGameMode);
+                    if (!allowed.includes(num)) { setInlineFeedback("board-feedback", `⚠️ यह पत्ती (${num}) मान्य सूची में नहीं है!`, "error"); return; }
+                    if (isNaN(pts) || pts < 10) { setInlineFeedback("board-feedback", "⚠️ न्यूनतम दांव 10 Points है!", "error"); return; }
+                    entriesToSubmit.push({ number: num, points: pts, gameType: gameType });
+                }
+                if (entriesToSubmit.length === 0) {
+                    setInlineFeedback("board-feedback", "कृपया कम से कम एक पत्ती जोड़ें या दर्ज करें!", "error");
+                    return;
+                }
+            } else {
+                if (!num) { setInlineFeedback("board-feedback", "कृपया नंबर या पत्ती दर्ज करें!", "error"); return; }
+                if (isNaN(pts) || pts < 10) { setInlineFeedback("board-feedback", "⚠️ न्यूनतम दांव 10 Points है!", "error"); return; }
+                entriesToSubmit.push({ number: num, points: pts, gameType: gameType });
             }
 
-            currentWallet -= pts;
+            for (let ent of entriesToSubmit) {
+                if (ent.gameType === 'OPEN' && isOpenDeclared) {
+                    setInlineFeedback("board-feedback", `⚠️ ${slot.start} का OPEN परिणाम आ चुका है!`, "error");
+                    return;
+                }
+            }
+
+            let totalPts = entriesToSubmit.reduce((s, x) => s + x.points, 0);
+            if (totalPts > currentWallet) { setInlineFeedback("board-feedback", "⚠️ आपके खाते में पर्याप्त Points नहीं हैं!", "error"); return; }
+
+            currentWallet -= totalPts;
             userWallets[activeUserPhone] = currentWallet;
             db.ref('userWallets/' + activeUserPhone).set(currentWallet);
             updateWalletUI();
@@ -4427,23 +4677,28 @@
             let mobileTimeStr = getIndiaNow().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             let slotStr = `${slot.start} - ${slot.end}`;
             let lName = currentType === 'shubh' ? 'शुभ लक्ष्मी' : 'धन लक्ष्मी';
-            let hKind = currentGameMode.includes('Pana') ? 'पत्ती' : (gameType === 'CLOSE' ? 'क्लोज' : 'ओपन');
 
-            let betObj = {
-                id: Date.now() + Math.random(), createdAt: Date.now(), dateKey: todayKey, user: activeUserPhone,
-                lottery: lName, lotteryType: currentType, gameMode: currentGameMode, hindiKind: hKind,
-                gameType: gameType, slotTime: slotStr, number: num, points: pts,
-                mobileTime: mobileTimeStr, time: mobileTimeStr, paidOut: false
-            };
+            entriesToSubmit.forEach(ent => {
+                let hKind = currentGameMode.includes('Pana') ? 'पत्ती' : (ent.gameType === 'CLOSE' ? 'क्लोज' : 'ओपन');
+                let betObj = {
+                    id: Date.now() + Math.random(), createdAt: Date.now(), dateKey: todayKey, user: activeUserPhone,
+                    lottery: lName, lotteryType: currentType, gameMode: currentGameMode, hindiKind: hKind,
+                    gameType: ent.gameType, slotTime: slotStr, number: ent.number, points: ent.points,
+                    mobileTime: mobileTimeStr, time: mobileTimeStr, paidOut: false
+                };
+                if (currentType === 'shubh') shubhBets.unshift(betObj);
+                else dhanBets.unshift(betObj);
+                if (!userBetHistory[activeUserPhone]) userBetHistory[activeUserPhone] = [];
+                userBetHistory[activeUserPhone].unshift(betObj);
+            });
 
-            if (currentType === 'shubh') { shubhBets.unshift(betObj); db.ref('shubhBets').set(shubhBets); }
-            else { dhanBets.unshift(betObj); db.ref('dhanBets').set(dhanBets); }
-
-            if (!userBetHistory[activeUserPhone]) userBetHistory[activeUserPhone] = [];
-            userBetHistory[activeUserPhone].unshift(betObj);
+            if (currentType === 'shubh') db.ref('shubhBets').set(shubhBets);
+            else db.ref('dhanBets').set(dhanBets);
             db.ref('userBetHistory/' + activeUserPhone).set(userBetHistory[activeUserPhone]);
 
-            setInlineFeedback("main-inline-feedback", `✅ ${lName} में ${num} (${pts} Points) सफलतापूर्वक लग गया!`, "success");
+            luckTempAddedPanaBids = [];
+            renderLuckTempPanaBids();
+            setInlineFeedback("main-inline-feedback", `✅ ${lName} में ${entriesToSubmit.length} दांव (कुल ${totalPts} Points) सफलतापूर्वक लग गए!`, "success");
             closeGameScreen();
         }
 
@@ -4662,6 +4917,7 @@
                             <div>
                                 <b>${escapeHtml(u.name || ph)}</b> (${escapeHtml(ph)})<br>
                                 Points: <b style="color:var(--accent);">${bal}</b> | स्टेटस: ${u.isLocked ? '<span style="color:#f87171;">लॉक</span>' : '<span style="color:#4ade80;">सक्रिय</span>'}
+                                ${isMasterAdminUser() ? `<br><span style="color:#38bdf8; font-size:0.82rem;">🔑 Password: <b style="color:#fde047; font-family:monospace;">${escapeHtml(getUserPlainPasswordForMainAdmin(ph))}</b></span>` : ''}
                             </div>
                             <div style="display:flex; gap:5px; flex-wrap:wrap;">
                                 <button type="button" class="chart-edit-btn" style="background:#0284c7;" onclick="inspectAdminUser('${escapeHtml(ph)}')">🔍 देखें / चैट</button>
@@ -4710,6 +4966,15 @@
                     <button type="button" class="chart-edit-btn" style="background:#475569;" onclick="document.getElementById('admin-selected-user-inspector').classList.add('hidden')">✕ बंद</button>
                 </div>
                 <div style="font-size:0.8rem; margin:6px 0;">वर्तमान बैलेंस: <b style="color:#4ade80;">${bal} Points</b></div>
+                ${isMasterAdminUser() ? `
+                    <div class="admin-pass-reveal-box">
+                        <div>🆔 यूज़र ID: <b>${escapeHtml(ph)}</b> | 🔑 असली Password: <b style="color:#fde047; font-size:0.95rem; font-family:monospace;">${escapeHtml(getUserPlainPasswordForMainAdmin(ph))}</b></div>
+                        <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+                            <button type="button" class="chart-save-btn" onclick="sendRecoveredPasswordToUser('${escapeHtml(ph)}')">📩 ऐप चैट में Password भेजें</button>
+                            <a href="sms:${escapeHtml(ph)}?body=${encodeURIComponent('Good Luck Laxmi Login ID: ' + ph + ' | Password: ' + getUserPlainPasswordForMainAdmin(ph))}" class="chart-edit-btn" style="background:#0284c7; text-decoration:none; display:inline-block;">📱 SMS से भेजें</a>
+                        </div>
+                    </div>
+                ` : ''}
                 <div style="display:flex; gap:6px; margin-bottom:8px;">
                     <input type="number" id="adm-adjust-pts-input" placeholder="Points (+/-)" style="margin:0; padding:7px; font-size:0.84rem;">
                     <button type="button" class="chart-save-btn" onclick="adjustUserPointsByAdmin('${escapeHtml(ph)}', 1)">+ जोड़ें</button>
@@ -5007,6 +5272,16 @@
             renderAdminDeposits();
         }
 
+        function openFullScreenQRZoom(idx) {
+            const r = withdrawRequests[idx];
+            if (!r || !r.qrImage) return;
+            const imgEl = document.getElementById('qr-zoom-full-img');
+            const infoEl = document.getElementById('qr-zoom-user-info');
+            if (imgEl) imgEl.src = r.qrImage;
+            if (infoEl) infoEl.innerText = `यूज़र: ${r.user} | विड्रॉल राशि: ₹${r.amount}`;
+            document.getElementById('qr-fullscreen-zoom-modal').classList.remove('hidden');
+        }
+
         function renderAdminWithdrawals() {
             const box = document.getElementById('admin-withdraw-list');
             if (!box) return;
@@ -5015,7 +5290,14 @@
                 <div class="req-card">
                     <b>यूज़र:</b> ${escapeHtml(r.user)} | <b>राशि:</b> ₹${escapeHtml(r.amount)} | <span class="badge badge-${escapeHtml(r.status)}">${escapeHtml(r.status)}</span><br>
                     <b>माध्यम:</b> ${escapeHtml(r.method)} — ${escapeHtml(r.details)}<br>
-                    ${r.qrImage ? `<img src="${escapeHtml(r.qrImage)}" alt="QR" style="max-height:90px; margin-top:5px; border-radius:4px;">` : ''}
+                    ${r.qrImage ? `
+                        <div style="text-align:center;">
+                            <div class="withdraw-qr-large-wrap" onclick="openFullScreenQRZoom(${idx})">
+                                <img src="${escapeHtml(r.qrImage)}" alt="QR" class="withdraw-qr-large-img">
+                                <div style="color:#111; font-size:0.74rem; font-weight:900; margin-top:5px;">🔍 बड़ा देखने के लिए QR पर क्लिक करें</div>
+                            </div>
+                        </div>
+                    ` : ''}
                     ${r.status === 'pending' ? `
                         <div style="display:flex; gap:8px; margin-top:8px;">
                             <button type="button" class="chart-save-btn" onclick="approveWithdrawReq(${idx})">✅ भुगतान पूर्ण</button>
@@ -5056,16 +5338,36 @@
             const box = document.getElementById('admin-help-requests-list');
             if (!box) return;
             if (!helpRequests.length) { box.innerHTML = `<p style="color:#94a3b8;">कोई सहायता अनुरोध नहीं है।</p>`; return; }
-            box.innerHTML = helpRequests.map((r, idx) => `
+            box.innerHTML = helpRequests.map((r, idx) => {
+                const userPass = isMasterAdminUser() ? getUserPlainPasswordForMainAdmin(r.user) : null;
+                return `
                 <div class="req-card">
                     <b>यूज़र:</b> ${escapeHtml(r.user)} | <span class="badge badge-${escapeHtml(r.status)}">${escapeHtml(r.status)}</span> <span style="font-size:0.72rem; color:#94a3b8;">(${escapeHtml(r.time)})</span><br>
                     <b>विवरण:</b> ${escapeHtml(r.message)}<br>
+                    ${isMasterAdminUser() ? `<div style="margin:5px 0; color:#38bdf8;">🔑 असली Password: <b style="color:#fde047; font-family:monospace;">${escapeHtml(userPass)}</b></div>` : ''}
                     <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
+                        ${isMasterAdminUser() ? `<button type="button" class="chart-save-btn" style="background:#7c3aed;" onclick="sendRecoveredPasswordToUser('${escapeHtml(r.user)}', ${idx})">🔑 Password भेजें & हल करें</button>` : ''}
+                        ${isMasterAdminUser() ? `<a href="sms:${escapeHtml(r.user)}?body=${encodeURIComponent('Good Luck Laxmi Login ID: ' + r.user + ' | Password: ' + userPass)}" class="chart-edit-btn" style="background:#0284c7; text-decoration:none;">📱 SMS से भेजें</a>` : ''}
                         <button type="button" class="chart-edit-btn" style="background:#0284c7;" onclick="openHelpUserLiveChat('${escapeHtml(r.user)}')">💬 लाइव चैट</button>
                         ${r.status === 'pending' ? `<button type="button" class="chart-save-btn" onclick="resolveHelpRequest(${idx})">✅ हल करें</button>` : ''}
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
+        }
+
+
+        function sendRecoveredPasswordToUser(ph, reqIdx = null) {
+            if (!isMasterAdminUser() || !ph) return;
+            const pw = getUserPlainPasswordForMainAdmin(ph);
+            sendLiveChatMessageToUser(ph, `🔑 पासवर्ड रिकवरी (मुख्य एडमिन): आपकी आईडी ${ph} का पासवर्ड "${pw}" है।`, "admin");
+            if (reqIdx !== null && helpRequests[reqIdx]) {
+                helpRequests[reqIdx].status = 'approved';
+                db.ref('helpRequests').set(helpRequests);
+                renderAdminHelpRequests();
+                updateAdminBadgesAndLiveUsers();
+            }
+            setInlineFeedback("admin-inline-feedback", `✅ यूज़र ${ph} को उसका पासवर्ड (${pw}) भेज दिया गया है!`, "success");
         }
 
         function resolveHelpRequest(idx) {
@@ -5380,15 +5682,73 @@
                 `;
             }
 
+            const nowMins = getIndiaNow().getHours() * 60 + getIndiaNow().getMinutes();
+
+            function evaluateLuckyBetLiveStatus(item) {
+                const wonVal = Number(item.wonPoints) || 0;
+                if (wonVal > 0) {
+                    return { state: "WIN", wonVal };
+                }
+                if (currentMyBetScope !== 'luck') {
+                    const resObj = amarMarketResults[item.marketId] || {};
+                    if (resObj.finalPaid) return { state: "LOSS", wonVal: 0 };
+                    if (item.session === 'OPEN' && resObj.openDigit) return { state: "LOSS", wonVal: 0 };
+                    if (item.gameMode === 'Jodi Digit' && resObj.openDigit && String(item.number || '')[0] !== String(resObj.openDigit)) {
+                        return { state: "LOSS", wonVal: 0 };
+                    }
+                    return { state: "LIVE", wonVal: 0 };
+                }
+
+                const slotsArr = (item.lotteryType === 'dhan' || currentMyBetLuckSubTab === 'dhan') ? dhanSlotData : shubhSlotData;
+                const matchedSlot = (slotsArr || []).find(s => s && s.type !== 'lunch' && `${s.start} - ${s.end}` === item.slotTime);
+                const slotEndMins = matchedSlot ? timeStrToMins(matchedSlot.end) : -1;
+                const slotExpiredByTime = (slotEndMins > 0 && nowMins >= slotEndMins);
+
+                if (!matchedSlot) {
+                    return item.paidOut ? { state: "LOSS", wonVal: 0 } : { state: "LIVE", wonVal: 0 };
+                }
+
+                const isClosedDeclared = (matchedSlot.stage === 'closed_declared');
+                const isOpenDeclared = (matchedSlot.stage === 'open_declared' || isClosedDeclared);
+
+                let declaredOpenDigit = "";
+                if (matchedSlot.fixedOpenStr && matchedSlot.fixedOpenStr.includes('-')) {
+                    declaredOpenDigit = matchedSlot.fixedOpenStr.split('-')[1].trim();
+                } else if (matchedSlot.display && matchedSlot.display.includes('-')) {
+                    const parts = matchedSlot.display.replace('OPEN', '').trim().split('-');
+                    if (parts[1]) declaredOpenDigit = parts[1].trim()[0];
+                }
+
+                if (isClosedDeclared || slotExpiredByTime) {
+                    return { state: "LOSS", wonVal: 0 };
+                }
+
+                if (item.gameType === 'OPEN' && isOpenDeclared) {
+                    return { state: "LOSS", wonVal: 0 };
+                }
+
+                if ((item.gameType === 'JODI' || item.gameMode === 'Jodi Digit') && isOpenDeclared && declaredOpenDigit) {
+                    const firstDigitOfJodi = String(item.number || '').trim()[0];
+                    if (firstDigitOfJodi !== declaredOpenDigit) {
+                        return { state: "LOSS", wonVal: 0 };
+                    }
+                    return { state: "LIVE", wonVal: 0 };
+                }
+
+                return { state: "LIVE", wonVal: 0 };
+            }
+
             if (todayItems.length === 0) {
                 container.innerHTML = `<p style="color:#94a3b8; font-size:0.85rem; text-align:center; padding:12px;">आज कोई दांव नहीं लगा है।</p>`;
             } else {
                 container.innerHTML = todayItems.map(item => {
-                    const wonVal = Number(item.wonPoints) || 0;
-                    const cardCls = wonVal > 0 ? 'slip-won' : (item.paidOut ? 'slip-loss' : '');
-                    const pillHtml = wonVal > 0
-                        ? `<span class="mybet-status-pill status-pill-win">🏆 जीते +${wonVal}</span>`
-                        : (item.paidOut ? `<span class="mybet-status-pill status-pill-loss">परिणाम आया</span>` : `<span class="mybet-status-pill status-pill-live">⏳ लाइव</span>`);
+                    const evalRes = evaluateLuckyBetLiveStatus(item);
+                    const cardCls = evalRes.state === 'WIN' ? 'slip-won' : (evalRes.state === 'LOSS' ? 'slip-loss' : '');
+                    const pillHtml = evalRes.state === 'WIN'
+                        ? `<span class="win-badge-trophy">🏆 WIN +${evalRes.wonVal} Points</span>`
+                        : (evalRes.state === 'LOSS'
+                            ? `<span class="loss-badge-red">LOSS</span>`
+                            : `<span class="live-badge-pulse">⏳ लाइव</span>`);
 
                     return `
                         <div class="mybet-slip-card ${cardCls}" onclick="openLargeParchiModal('${escapeHtml(String(item.id))}')">
