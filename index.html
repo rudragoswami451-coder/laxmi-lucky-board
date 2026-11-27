@@ -724,7 +724,7 @@
         <div class="lottery-tabs-row">
             <button type="button" class="btn btn-shubh-tab" id="tab-shubh" onclick="switchLottery('shubh')">
                 <span class="lottery-box-top">⭐ शुभ लक्ष्मी <span class="lottery-tag-shubh">LOTTERY</span></span>
-                <span class="lottery-box-meta">🎰 15 मिनट • 09 AM - 11:15 PM</span>
+                <span class="lottery-box-meta">🎰 15 मिनट • 09 AM - 11:45 PM</span>
             </button>
             <button type="button" class="btn btn-dhan-tab tab-inactive-dim" id="tab-dhan" onclick="switchLottery('dhan')">
                 <span class="lottery-box-top">💰 धन लक्ष्मी <span class="lottery-tag-dhan">LOTTERY</span></span>
@@ -764,6 +764,11 @@
 
         <div style="margin-top: 15px;">
             <h4 style="color: var(--secondary); text-align: center; margin-bottom: 5px;" id="chart-header-title">📜 शुभ लक्ष्मी लाइव परिणाम चार्ट</h4>
+            <div style="display:flex; justify-content:space-between; padding:6px 12px; background:#241c3d; border:1px solid var(--secondary); border-radius:8px 8px 0 0; font-size:0.78rem; font-weight:900; color:var(--accent);">
+                <span>OPEN TIME</span>
+                <span>LIVE RESULT</span>
+                <span>CLOSE TIME</span>
+            </div>
             <div class="result-line-box" id="result-container"></div>
         </div>
 
@@ -2004,95 +2009,54 @@
         let qrTimerInterval = null;
         let qrTimeRemaining = 300;
 
-        let defaultShubhSlots = [
+                let defaultShubhSlots = [
             { start: "09:00 AM", display: "—", end: "09:15 AM", stage: "pending", adminLocked: false },
-            { start: "09:15 AM", display: "—", end: "09:30 AM", stage: "pending", adminLocked: false },
             { start: "09:30 AM", display: "—", end: "09:45 AM", stage: "pending", adminLocked: false },
-            { start: "09:45 AM", display: "—", end: "10:00 AM", stage: "pending", adminLocked: false },
             { start: "10:00 AM", display: "—", end: "10:15 AM", stage: "pending", adminLocked: false },
-            { start: "10:15 AM", display: "—", end: "10:30 AM", stage: "pending", adminLocked: false },
             { start: "10:30 AM", display: "—", end: "10:45 AM", stage: "pending", adminLocked: false },
-            { start: "10:45 AM", display: "—", end: "11:00 AM", stage: "pending", adminLocked: false },
             { start: "11:00 AM", display: "—", end: "11:15 AM", stage: "pending", adminLocked: false },
-            { start: "11:15 AM", display: "—", end: "11:30 AM", stage: "pending", adminLocked: false },
             { start: "11:30 AM", display: "—", end: "11:45 AM", stage: "pending", adminLocked: false },
-            { start: "11:45 AM", display: "—", end: "12:00 PM", stage: "pending", adminLocked: false },
             { start: "12:00 PM", display: "—", end: "12:15 PM", stage: "pending", adminLocked: false },
-            { start: "12:15 PM", display: "—", end: "12:30 PM", stage: "pending", adminLocked: false },
             { start: "12:30 PM", display: "—", end: "12:45 PM", stage: "pending", adminLocked: false },
-            { start: "12:45 PM", display: "—", end: "01:00 PM", stage: "pending", adminLocked: false },
             { start: "01:00 PM", display: "—", end: "01:15 PM", stage: "pending", adminLocked: false },
-            { start: "01:15 PM", display: "—", end: "01:30 PM", stage: "pending", adminLocked: false },
             { start: "01:30 PM", display: "—", end: "01:45 PM", stage: "pending", adminLocked: false },
-            { start: "01:45 PM", display: "—", end: "02:00 PM", stage: "pending", adminLocked: false },
             { start: "02:00 PM", display: "—", end: "02:15 PM", stage: "pending", adminLocked: false },
-            { start: "02:15 PM", display: "—", end: "02:30 PM", stage: "pending", adminLocked: false },
             { start: "02:30 PM", display: "—", end: "02:45 PM", stage: "pending", adminLocked: false },
-            { start: "02:45 PM", display: "—", end: "03:00 PM", stage: "pending", adminLocked: false },
             { start: "03:00 PM", display: "—", end: "03:15 PM", stage: "pending", adminLocked: false },
-            { start: "03:15 PM", display: "—", end: "03:30 PM", stage: "pending", adminLocked: false },
             { start: "03:30 PM", display: "—", end: "03:45 PM", stage: "pending", adminLocked: false },
-            { start: "03:45 PM", display: "—", end: "04:00 PM", stage: "pending", adminLocked: false },
             { start: "04:00 PM", display: "—", end: "04:15 PM", stage: "pending", adminLocked: false },
-            { start: "04:15 PM", display: "—", end: "04:30 PM", stage: "pending", adminLocked: false },
             { start: "04:30 PM", display: "—", end: "04:45 PM", stage: "pending", adminLocked: false },
-            { start: "04:45 PM", display: "—", end: "05:00 PM", stage: "pending", adminLocked: false },
             { start: "05:00 PM", display: "—", end: "05:15 PM", stage: "pending", adminLocked: false },
-            { start: "05:15 PM", display: "—", end: "05:30 PM", stage: "pending", adminLocked: false },
             { start: "05:30 PM", display: "—", end: "05:45 PM", stage: "pending", adminLocked: false },
-            { start: "05:45 PM", display: "—", end: "06:00 PM", stage: "pending", adminLocked: false },
             { start: "06:00 PM", display: "—", end: "06:15 PM", stage: "pending", adminLocked: false },
-            { start: "06:15 PM", display: "—", end: "06:30 PM", stage: "pending", adminLocked: false },
             { start: "06:30 PM", display: "—", end: "06:45 PM", stage: "pending", adminLocked: false },
-            { start: "06:45 PM", display: "—", end: "07:00 PM", stage: "pending", adminLocked: false },
             { start: "07:00 PM", display: "—", end: "07:15 PM", stage: "pending", adminLocked: false },
-            { start: "07:15 PM", display: "—", end: "07:30 PM", stage: "pending", adminLocked: false },
             { start: "07:30 PM", display: "—", end: "07:45 PM", stage: "pending", adminLocked: false },
-            { start: "07:45 PM", display: "—", end: "08:00 PM", stage: "pending", adminLocked: false },
             { start: "08:00 PM", display: "—", end: "08:15 PM", stage: "pending", adminLocked: false },
-            { start: "08:15 PM", display: "—", end: "08:30 PM", stage: "pending", adminLocked: false },
             { start: "08:30 PM", display: "—", end: "08:45 PM", stage: "pending", adminLocked: false },
-            { start: "08:45 PM", display: "—", end: "09:00 PM", stage: "pending", adminLocked: false },
             { start: "09:00 PM", display: "—", end: "09:15 PM", stage: "pending", adminLocked: false },
-            { start: "09:15 PM", display: "—", end: "09:30 PM", stage: "pending", adminLocked: false },
             { start: "09:30 PM", display: "—", end: "09:45 PM", stage: "pending", adminLocked: false },
-            { start: "09:45 PM", display: "—", end: "10:00 PM", stage: "pending", adminLocked: false },
             { start: "10:00 PM", display: "—", end: "10:15 PM", stage: "pending", adminLocked: false },
-            { start: "10:15 PM", display: "—", end: "10:30 PM", stage: "pending", adminLocked: false },
             { start: "10:30 PM", display: "—", end: "10:45 PM", stage: "pending", adminLocked: false },
-            { start: "10:45 PM", display: "—", end: "11:00 PM", stage: "pending", adminLocked: false },
-            { start: "11:00 PM", display: "—", end: "11:15 PM", stage: "pending", adminLocked: false }
+            { start: "11:00 PM", display: "—", end: "11:15 PM", stage: "pending", adminLocked: false },
+            { start: "11:30 PM", display: "—", end: "11:45 PM", stage: "pending", adminLocked: false }
         ];
 
-        let defaultDhanSlots = [
+                let defaultDhanSlots = [
             { start: "09:00 AM", display: "—", end: "09:30 AM", stage: "pending", adminLocked: false },
-            { start: "09:30 AM", display: "—", end: "10:00 AM", stage: "pending", adminLocked: false },
             { start: "10:00 AM", display: "—", end: "10:30 AM", stage: "pending", adminLocked: false },
-            { start: "10:30 AM", display: "—", end: "11:00 AM", stage: "pending", adminLocked: false },
             { start: "11:00 AM", display: "—", end: "11:30 AM", stage: "pending", adminLocked: false },
-            { start: "11:30 AM", display: "—", end: "12:00 PM", stage: "pending", adminLocked: false },
             { start: "12:00 PM", display: "—", end: "12:30 PM", stage: "pending", adminLocked: false },
-            { start: "12:30 PM", display: "—", end: "01:00 PM", stage: "pending", adminLocked: false },
             { start: "01:00 PM", display: "—", end: "01:30 PM", stage: "pending", adminLocked: false },
-            { start: "01:30 PM", display: "—", end: "02:00 PM", stage: "pending", adminLocked: false },
             { start: "02:00 PM", display: "—", end: "02:30 PM", stage: "pending", adminLocked: false },
-            { start: "02:30 PM", display: "—", end: "03:00 PM", stage: "pending", adminLocked: false },
             { start: "03:00 PM", display: "—", end: "03:30 PM", stage: "pending", adminLocked: false },
-            { start: "03:30 PM", display: "—", end: "04:00 PM", stage: "pending", adminLocked: false },
             { start: "04:00 PM", display: "—", end: "04:30 PM", stage: "pending", adminLocked: false },
-            { start: "04:30 PM", display: "—", end: "05:00 PM", stage: "pending", adminLocked: false },
             { start: "05:00 PM", display: "—", end: "05:30 PM", stage: "pending", adminLocked: false },
-            { start: "05:30 PM", display: "—", end: "06:00 PM", stage: "pending", adminLocked: false },
             { start: "06:00 PM", display: "—", end: "06:30 PM", stage: "pending", adminLocked: false },
-            { start: "06:30 PM", display: "—", end: "07:00 PM", stage: "pending", adminLocked: false },
             { start: "07:00 PM", display: "—", end: "07:30 PM", stage: "pending", adminLocked: false },
-            { start: "07:30 PM", display: "—", end: "08:00 PM", stage: "pending", adminLocked: false },
             { start: "08:00 PM", display: "—", end: "08:30 PM", stage: "pending", adminLocked: false },
-            { start: "08:30 PM", display: "—", end: "09:00 PM", stage: "pending", adminLocked: false },
             { start: "09:00 PM", display: "—", end: "09:30 PM", stage: "pending", adminLocked: false },
-            { start: "09:30 PM", display: "—", end: "10:00 PM", stage: "pending", adminLocked: false },
             { start: "10:00 PM", display: "—", end: "10:30 PM", stage: "pending", adminLocked: false },
-            { start: "10:30 PM", display: "—", end: "11:00 PM", stage: "pending", adminLocked: false },
             { start: "11:00 PM", display: "—", end: "11:30 PM", stage: "pending", adminLocked: false }
         ];
 
@@ -2131,7 +2095,7 @@
             let now = getIndiaNow();
             let currentMins = now.getHours() * 60 + now.getMinutes();
             let t = typeOverride || currentType;
-            let closeEndMins = (t === 'shubh') ? timeStrToMins("11:15 PM") : timeStrToMins("11:30 PM");
+            let closeEndMins = (t === 'shubh') ? timeStrToMins("11:45 PM") : timeStrToMins("11:30 PM");
             let openStartMins = timeStrToMins("09:00 AM");
             return (currentMins < openStartMins || currentMins > closeEndMins);
         }
@@ -4237,9 +4201,9 @@
                 } else {
                     container.innerHTML += `
                         <div class="result-row">
-                            <span class="start-time">${escapeHtml(s.start)}</span>
+                            <span class="start-time"><small style="color:#94a3b8;display:block;font-size:0.65rem;">OPEN</small>${escapeHtml(s.start)}</span>
                             <span class="result-data">${formatResultBadge(s.display)}</span>
-                            <span class="end-time">${escapeHtml(s.end)}</span>
+                            <span class="end-time"><small style="color:#94a3b8;display:block;font-size:0.65rem;">CLOSE</small>${escapeHtml(s.end)}</span>
                         </div>
                     `;
                 }
@@ -5440,9 +5404,26 @@
             const amt = parseInt(document.getElementById('dep-amount').value, 10) || 99;
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(upi).catch(() => {});
+            } else {
+                const tmp = document.createElement('textarea');
+                tmp.value = upi;
+                document.body.appendChild(tmp);
+                tmp.select();
+                try { document.execCommand('copy'); } catch (e) {}
+                document.body.removeChild(tmp);
             }
-            setInlineFeedback("deposit-feedback", `📋 UPI ID (${upi}) कॉपी हो गई है! अपने UPI ऐप से ₹${amt} भेजकर 12-अंकों का UTR डालें।`, "info");
-            window.location.href = `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent("Good Luck Laxmi")}&am=${amt}&cu=INR`;
+            const upiUri = `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent("Good Luck Laxmi")}&am=${amt}&cu=INR`;
+            setInlineFeedback("deposit-feedback", `📋 UPI ID (${upi}) कॉपी हो गई है! यदि APK में UPI ऐप अपने आप न खुले, तो ऊपर दिया QR स्कैन करें या PhonePe / GPay / Paytm में UPI ID पेस्ट करके ₹${amt} भेजें।`, "info");
+            try {
+                const a = document.createElement('a');
+                a.href = upiUri;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (e) {
+                window.location.href = upiUri;
+            }
         }
 
         function submitDeposit() {
