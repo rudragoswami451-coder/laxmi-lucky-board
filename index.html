@@ -4743,16 +4743,60 @@
             renderSelectedAdminUserInspector(ph);
         }
 
+        function normalizeQrImageValue(val) {
+            const s = String(val || '').trim();
+            if (!s || s === "[अपलोड की गई फोटो]") return "";
+            if (s.startsWith('data:image/') || isSafeUrl(s)) return s;
+            return "";
+        }
+
+        function compressQrImageFile(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const rawDataUrl = e.target.result;
+                const img = new Image();
+                img.onload = function() {
+                    try {
+                        const maxDim = 420;
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > maxDim || h > maxDim) {
+                            if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                            else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, w, h);
+                        ctx.drawImage(img, 0, 0, w, h);
+                        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+                        callback(compressed && compressed.length < rawDataUrl.length ? compressed : rawDataUrl);
+                    } catch (err) {
+                        callback(rawDataUrl);
+                    }
+                };
+                img.onerror = function() { callback(rawDataUrl); };
+                img.src = rawDataUrl;
+            };
+            reader.readAsDataURL(file);
+        }
+
         function loadQRInputsForAdmin() {
             document.getElementById('admin-active-qr-select').value = qrSettings.activeKey || "qr1";
             document.getElementById('admin-upi1-input').value = (qrSettings.qr1 && qrSettings.qr1.upi) || "";
-            document.getElementById('admin-qr1-url-input').value = (qrSettings.qr1 && isSafeUrl(qrSettings.qr1.imageSrc) ? qrSettings.qr1.imageSrc : "") || "";
+            const q1Src = normalizeQrImageValue(qrSettings.qr1 && qrSettings.qr1.imageSrc);
+            document.getElementById('admin-qr1-url-input').value = q1Src.startsWith('data:image/') ? "[अपलोड की गई फोटो]" : q1Src;
+
             document.getElementById('admin-upi2-input').value = (qrSettings.qr2 && qrSettings.qr2.upi) || "";
-            document.getElementById('admin-qr2-url-input').value = (qrSettings.qr2 && isSafeUrl(qrSettings.qr2.imageSrc) ? qrSettings.qr2.imageSrc : "") || "";
+            const q2Src = normalizeQrImageValue(qrSettings.qr2 && qrSettings.qr2.imageSrc);
+            document.getElementById('admin-qr2-url-input').value = q2Src.startsWith('data:image/') ? "[अपलोड की गई फोटो]" : q2Src;
         }
 
         function switchAdminActiveQR() {
             qrSettings.activeKey = document.getElementById('admin-active-qr-select').value;
+            try { localStorage.setItem('gll_saved_qr_settings', JSON.stringify(qrSettings)); } catch (e) {}
             db.ref('qrSettings/activeKey').set(qrSettings.activeKey);
             renderActiveQRInDepositModal();
         }
@@ -4760,45 +4804,79 @@
         function handleQRFileUpload(key, input) {
             const file = input.files && input.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
+            setInlineFeedback("admin-inline-feedback", "⏳ QR फोटो तैयार हो रही है, कृपया 1 सेकंड रुकें...", "info");
+            compressQrImageFile(file, function(finalDataUrl) {
                 if (!qrSettings[key]) qrSettings[key] = { upi: "", imageSrc: "" };
-                qrSettings[key].imageSrc = e.target.result;
+                qrSettings[key].imageSrc = finalDataUrl;
                 if (key === 'qr1') document.getElementById('admin-qr1-url-input').value = "[अपलोड की गई फोटो]";
                 else document.getElementById('admin-qr2-url-input').value = "[अपलोड की गई फोटो]";
-            };
-            reader.readAsDataURL(file);
+                try { localStorage.setItem('gll_saved_qr_settings', JSON.stringify(qrSettings)); } catch (e) {}
+                setInlineFeedback("admin-inline-feedback", "✅ QR फोटो लोड हो गई! अब नीचे '💾 दोनों UPI व QR अपडेट सेव करें' बटन दबाएं।", "success");
+            });
         }
 
         function saveAllQRSettings() {
-            qrSettings.activeKey = document.getElementById('admin-active-qr-select').value;
+            const activeKey = document.getElementById('admin-active-qr-select').value || "qr1";
             const u1 = document.getElementById('admin-upi1-input').value.trim();
-            const q1Url = document.getElementById('admin-qr1-url-input').value.trim();
+            const q1Raw = document.getElementById('admin-qr1-url-input').value.trim();
             const u2 = document.getElementById('admin-upi2-input').value.trim();
-            const q2Url = document.getElementById('admin-qr2-url-input').value.trim();
+            const q2Raw = document.getElementById('admin-qr2-url-input').value.trim();
 
-            if (!qrSettings.qr1) qrSettings.qr1 = { upi: "", imageSrc: "" };
-            if (!qrSettings.qr2) qrSettings.qr2 = { upi: "", imageSrc: "" };
+            const prev1 = qrSettings.qr1 || { upi: "goodluck.gpay@paytm", imageSrc: "" };
+            const prev2 = qrSettings.qr2 || { upi: "goodluck.phonepe@ybl", imageSrc: "" };
 
-            if (u1) qrSettings.qr1.upi = u1;
-            if (q1Url && q1Url !== "[अपलोड की गई फोटो]") qrSettings.qr1.imageSrc = q1Url;
+            const q1ImgFromUrl = normalizeQrImageValue(q1Raw);
+            const q2ImgFromUrl = normalizeQrImageValue(q2Raw);
 
-            if (u2) qrSettings.qr2.upi = u2;
-            if (q2Url && q2Url !== "[अपलोड की गई फोटो]") qrSettings.qr2.imageSrc = q2Url;
+            const finalQr1 = {
+                upi: u1 || prev1.upi || "goodluck.gpay@paytm",
+                imageSrc: q1ImgFromUrl || normalizeQrImageValue(prev1.imageSrc) || "",
+                updatedAt: Date.now()
+            };
 
-            db.ref('qrSettings').set(qrSettings);
-            renderActiveQRInDepositModal();
-            setInlineFeedback("admin-inline-feedback", "✅ UPI व QR सेटिंग्स सेव हो गईं!", "success");
+            const finalQr2 = {
+                upi: u2 || prev2.upi || "goodluck.phonepe@ybl",
+                imageSrc: q2ImgFromUrl || normalizeQrImageValue(prev2.imageSrc) || "",
+                updatedAt: Date.now()
+            };
+
+            qrSettings = {
+                activeKey: activeKey,
+                qr1: finalQr1,
+                qr2: finalQr2,
+                updatedAt: Date.now()
+            };
+
+            try { localStorage.setItem('gll_saved_qr_settings', JSON.stringify(qrSettings)); } catch (e) {}
+
+            db.ref('qrSettings').set(qrSettings).then(() => {
+                renderActiveQRInDepositModal();
+                loadQRInputsForAdmin();
+                setInlineFeedback("admin-inline-feedback", "✅ दोनों UPI व QR फोटो/URL स्थायी रूप से सेव हो गए! जब तक आप न बदलें, यही रहेंगे।", "success");
+            }).catch(() => {
+                renderActiveQRInDepositModal();
+                setInlineFeedback("admin-inline-feedback", "⚠️ नेटवर्क धीमा है या फोटो बहुत बड़ी है, कृपया पुनः प्रयास करें।", "error");
+            });
         }
 
         function renderActiveQRInDepositModal() {
-            const activeObj = qrSettings[qrSettings.activeKey] || qrSettings.qr1 || { upi: "goodluck@paytm", imageSrc: "" };
+            let cachedQr = null;
+            try { cachedQr = JSON.parse(localStorage.getItem('gll_saved_qr_settings') || 'null'); } catch (e) {}
+            const sourceSettings = (qrSettings && (qrSettings.qr1?.upi || qrSettings.qr1?.imageSrc || qrSettings.qr2?.upi || qrSettings.qr2?.imageSrc))
+                ? qrSettings
+                : (cachedQr || qrSettings);
+
+            const activeKey = sourceSettings.activeKey || "qr1";
+            const activeObj = sourceSettings[activeKey] || sourceSettings.qr1 || { upi: "goodluck@paytm", imageSrc: "" };
             const upiEl = document.getElementById('display-upi-id');
             const qrBox = document.getElementById('qr-display-box');
-            if (upiEl) upiEl.innerText = activeObj.upi || "goodluck@paytm";
+            const upiVal = (activeObj.upi && String(activeObj.upi).trim()) || "goodluck@paytm";
+
+            if (upiEl) upiEl.innerText = upiVal;
             if (qrBox) {
-                if (activeObj.imageSrc && (activeObj.imageSrc.startsWith('data:image/') || isSafeUrl(activeObj.imageSrc))) {
-                    qrBox.innerHTML = `<img src="${escapeHtml(activeObj.imageSrc)}" alt="QR Code" style="width:100%; height:100%; object-fit:contain;">`;
+                const imgSrc = normalizeQrImageValue(activeObj.imageSrc);
+                if (imgSrc) {
+                    qrBox.innerHTML = `<img src="${escapeHtml(imgSrc)}" alt="QR Code" style="width:100%; height:100%; object-fit:contain; cursor:zoom-in;" onclick="openFullscreenQRZoom('${escapeHtml(imgSrc)}', 'UPI ID: ${escapeHtml(upiVal)}')">`;
                 } else {
                     qrBox.innerHTML = `<span id="qr-placeholder-text">[ QR CODE ]</span>`;
                 }
@@ -4967,14 +5045,57 @@
         }
 
         function handleCopyAndPayApp() {
-            const activeObj = qrSettings[qrSettings.activeKey] || qrSettings.qr1;
-            const upi = (activeObj && activeObj.upi) || "goodluck@paytm";
-            const amt = parseInt(document.getElementById('dep-amount').value, 10) || 99;
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(upi).catch(() => {});
+            const activeKey = qrSettings.activeKey || "qr1";
+            const activeObj = qrSettings[activeKey] || qrSettings.qr1 || {};
+            const upi = String(activeObj.upi || document.getElementById('display-upi-id')?.innerText || "goodluck@paytm").trim();
+            const amtRaw = parseInt(document.getElementById('dep-amount').value, 10);
+            const amt = (!isNaN(amtRaw) && amtRaw > 0) ? amtRaw : 99;
+
+            if (!upi) {
+                setInlineFeedback("deposit-feedback", "⚠️ UPI ID उपलब्ध नहीं है।", "error");
+                return;
             }
-            setInlineFeedback("deposit-feedback", `📋 UPI ID (${upi}) कॉपी हो गई! ₹${amt} भुगतान करके 12-अंकों का UTR डालें।`, "info");
-            window.location.href = `upi://pay?pa=${encodeURIComponent(upi)}&pn=GoodLuckLaxmi&am=${amt}&cu=INR`;
+
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                navigator.clipboard.writeText(upi).catch(() => {});
+            } else {
+                try {
+                    const tempInput = document.createElement('input');
+                    tempInput.value = upi;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                } catch (e) {}
+            }
+
+            const encodedPa = encodeURIComponent(upi);
+            const encodedPn = encodeURIComponent("GoodLuckLaxmi");
+            const upiUrl = `upi://pay?pa=${encodedPa}&pn=${encodedPn}&am=${amt}&cu=INR`;
+            const intentUrl = `intent://pay?pa=${encodedPa}&pn=${encodedPn}&am=${amt}&cu=INR#Intent;scheme=upi;end`;
+
+            setInlineFeedback("deposit-feedback", `📋 UPI ID (${upi}) कॉपी हो गई! पेमेंट ऐप खुल रहा है... ₹${amt} भुगतान के बाद 12-अंकों का UTR डालें।`, "info");
+
+            const isAndroid = /Android/i.test(navigator.userAgent || '');
+            const isWebView = /\bwv\b|WebView/i.test(navigator.userAgent || '') || (window.Capacitor !== undefined);
+
+            if (isAndroid && isWebView) {
+                try {
+                    window.location.href = intentUrl;
+                    setTimeout(() => {
+                        try { window.location.href = upiUrl; } catch (e) {}
+                    }, 350);
+                    return;
+                } catch (e) {}
+            }
+
+            try {
+                window.location.href = upiUrl;
+            } catch (e) {
+                if (isAndroid) {
+                    try { window.location.href = intentUrl; } catch (err) {}
+                }
+            }
         }
 
         function submitDeposit() {
@@ -5621,10 +5742,22 @@
         });
 
         db.ref('qrSettings').on('value', snap => {
-            if (snap.exists()) {
-                qrSettings = { ...qrSettings, ...(snap.val() || {}) };
-                renderActiveQRInDepositModal();
-            }
+            if (!snap.exists() || !snap.val()) return;
+            const incoming = snap.val();
+            const merged = {
+                activeKey: incoming.activeKey || qrSettings.activeKey || "qr1",
+                qr1: {
+                    upi: (incoming.qr1 && incoming.qr1.upi) ? incoming.qr1.upi : (qrSettings.qr1?.upi || ""),
+                    imageSrc: normalizeQrImageValue(incoming.qr1?.imageSrc) || normalizeQrImageValue(qrSettings.qr1?.imageSrc) || ""
+                },
+                qr2: {
+                    upi: (incoming.qr2 && incoming.qr2.upi) ? incoming.qr2.upi : (qrSettings.qr2?.upi || ""),
+                    imageSrc: normalizeQrImageValue(incoming.qr2?.imageSrc) || normalizeQrImageValue(qrSettings.qr2?.imageSrc) || ""
+                }
+            };
+            qrSettings = merged;
+            try { localStorage.setItem('gll_saved_qr_settings', JSON.stringify(qrSettings)); } catch (e) {}
+            renderActiveQRInDepositModal();
         });
 
         db.ref('userBetHistory').on('value', snap => {
