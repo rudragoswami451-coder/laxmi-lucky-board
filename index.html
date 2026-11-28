@@ -623,6 +623,43 @@
             font-size: 0.84rem;
             color: #e0f2fe;
         }
+    
+        .amar-countdown-box {
+            background: linear-gradient(135deg, #2e1065, #701a75);
+            border: 2px solid #facc15;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 8px 0;
+            text-align: center;
+            box-shadow: 0 0 14px rgba(250, 204, 21, 0.35);
+        }
+        .amar-countdown-digits {
+            font-size: 1.7rem;
+            font-weight: 900;
+            font-family: monospace;
+            color: #fde047;
+            letter-spacing: 2px;
+        }
+        .amar-today-chat-box {
+            background: #171330;
+            border: 1.5px solid #38bdf8;
+            border-radius: 9px;
+            padding: 8px;
+            margin-top: 8px;
+            text-align: left;
+        }
+        .amar-today-chat-pill {
+            display: inline-block;
+            background: #27224a;
+            border: 1px solid #f5b041;
+            color: #fde68a;
+            border-radius: 6px;
+            padding: 3px 8px;
+            margin: 2px;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
     </style>
 </head>
 <body class="theme-shubh">
@@ -971,8 +1008,8 @@
     <!-- AMAR DUNIYA GAME CHART MODAL -->
     <div class="modal hidden" id="amar-game-chart-modal">
         <div class="modal-content" style="background:#131026; border-color:#5dade2; max-width:650px;">
-            <h3 style="color:#ffd166; margin-bottom:6px;">📈 Game Chart (2 Weeks • सोम - शनि)</h3>
-            <p style="font-size:0.78rem; color:#cbd5e1; margin-bottom:10px;">हमारे रिकॉर्ड में 2 हफ़्ते (6 दिन प्रति हफ़्ता) का चार्ट उपलब्ध है। अधिक पुराने रिकॉर्ड के लिए नीचे दी गई ऑनलाइन चार्ट लिंक खोलें।</p>
+            <h3 style="color:#ffd166; margin-bottom:6px;">📈 Game Chat & Chart (आज का बॉक्स + 2 Weeks)</h3>
+            <p style="font-size:0.78rem; color:#cbd5e1; margin-bottom:10px;">हर मार्केट का आज का अलग Chat/Result Box (Jodi व Patti/Pana) यहाँ जमा होता है और रात <b>02:00 AM</b> को रीसेट होकर नए दिन से चालू होता है।</p>
             <div id="amar-all-games-chart-container" style="text-align:left;"></div>
             <button type="button" class="btn" style="margin-top:12px;" onclick="closeAmarGameChartModal()">बंद करें</button>
         </div>
@@ -2133,12 +2170,18 @@
             return (currentMins < openStartMins || currentMins > closeEndMins);
         }
 
+        let amarDailyChatBoxes = {};
+        let amarPendingTimers = {};
+        let lastAmar2AMResetKey = localStorage.getItem('gll_last_2am_amar_reset_key') || "";
+
         function checkAndPerform1AMDailyReset() {
             let now = getIndiaNow();
             let currentMins = now.getHours() * 60 + now.getMinutes();
             let oneAMMins = 60;
+            let twoAMMins = 120;
             let todayKey = getTodayDateKey();
             let resetTag = `${todayKey}_1AM`;
+            let amarResetTag = `${todayKey}_2AM`;
 
             if (currentMins >= oneAMMins && lastMidnightResetKey !== resetTag) {
                 lastMidnightResetKey = resetTag;
@@ -2152,14 +2195,36 @@
                     }
                     shubhSlotData = JSON.parse(JSON.stringify(defaultShubhSlots));
                     dhanSlotData = JSON.parse(JSON.stringify(defaultDhanSlots));
-                    amarMarketResults = {};
                     db.ref('shubhSlots').set(shubhSlotData);
                     db.ref('dhanSlots').set(dhanSlotData);
-                    db.ref('amarMarketResults').set({});
                     db.ref('activeDateKey').set(todayKey);
                     renderResults();
                     updateLiveSpotlightBanner();
+                });
+            }
+
+            if (currentMins >= twoAMMins && lastAmar2AMResetKey !== amarResetTag) {
+                lastAmar2AMResetKey = amarResetTag;
+                localStorage.setItem('gll_last_2am_amar_reset_key', amarResetTag);
+
+                db.ref('amarActiveDateKey').once('value').then(snap => {
+                    let savedAmarDate = snap.val();
+                    if (savedAmarDate && savedAmarDate !== todayKey) {
+                        db.ref(`archives/${savedAmarDate}/amarMarketResults`).set(amarMarketResults);
+                        db.ref(`archives/${savedAmarDate}/amarDailyChatBoxes`).set(amarDailyChatBoxes);
+                    }
+                    amarMarketResults = {};
+                    amarDailyChatBoxes = {};
+                    amarPendingTimers = {};
+                    db.ref('amarMarketResults').set({});
+                    db.ref('amarDailyChatBoxes').set({});
+                    db.ref('amarPendingTimers').set({});
+                    db.ref('amarActiveDateKey').set(todayKey);
                     renderAmarMarketsGrid();
+                    if (!document.getElementById('amar-admin-section').classList.contains('hidden')) {
+                        renderAmarAdminBoxes();
+                        renderAmarAdminWorkspace(activeAmarAdminMarketId);
+                    }
                 });
             }
         }
@@ -2443,13 +2508,14 @@
 
         function isAmarMarketOpenNow(market) {
             let resObj = amarMarketResults[market.id] || {};
+            if (resObj.isFinalLocked) return false;
             if (resObj.forceState === "OPEN") return true;
             if (resObj.forceState === "CLOSED") return false;
             let now = getIndiaNow();
             let cur = now.getHours() * 60 + now.getMinutes();
             let closeM = timeStrToMins(market.closeTime, true);
             let curAdjusted = (closeM > 1440 && cur < 360) ? cur + 1440 : cur;
-            return curAdjusted < (closeM - 1);
+            return curAdjusted < (closeM - 10);
         }
 
         function getAmarMarketState(market) {
@@ -2460,20 +2526,23 @@
             let curAdjusted = (closeM > 1440 && cur < 360) ? cur + 1440 : cur;
             let resObj = amarMarketResults[market.id] || {};
             let openDeclared = Boolean(resObj.openDisplay) || (curAdjusted >= openM);
-            let lockedForOpen = curAdjusted >= (openM - 1);
-            let lockedForClose = curAdjusted >= (closeM - 1);
+            let closeDeclared = Boolean(resObj.isFinalLocked) || Boolean(resObj.closeDisplay);
 
-            if (resObj.forceState === "OPEN") {
-                lockedForOpen = false;
+            // 10 minutes before Open -> OPEN & JODI locked for normal users; 10 minutes before Close -> CLOSE locked
+            let lockedForOpen = closeDeclared || openDeclared || (curAdjusted >= (openM - 10));
+            let lockedForClose = closeDeclared || (curAdjusted >= (closeM - 10));
+
+            if (resObj.forceState === "OPEN" && !closeDeclared) {
+                lockedForOpen = openDeclared;
                 lockedForClose = false;
-            } else if (resObj.forceState === "CLOSED") {
+            } else if (resObj.forceState === "CLOSED" || closeDeclared) {
                 lockedForOpen = true;
                 lockedForClose = true;
             }
 
             return {
-                curAdjusted, openM, closeM, openDeclared, lockedForOpen, lockedForClose,
-                jodiAllowed: (!lockedForOpen && !openDeclared)
+                curAdjusted, openM, closeM, openDeclared, closeDeclared, lockedForOpen, lockedForClose,
+                jodiAllowed: (!lockedForOpen && !openDeclared && !closeDeclared)
             };
         }
 
@@ -2703,8 +2772,17 @@
             if (!draftWhiteParchi || !draftWhiteParchi.items.length) return;
             if (!activeUserPhone) { setInlineFeedback("ai-parchi-feedback", "पहले लॉगिन करें!", "error"); return; }
 
+            const parchiMarketObj = AMAR_MARKETS_CONFIG.find(x => x.id === draftWhiteParchi.marketId);
             const allValidPattis = getAllSystemValidPattis();
             for (let it of draftWhiteParchi.items) {
+                if (parchiMarketObj) {
+                    let mappedSessCheck = it.kind === "JODI" ? "JODI" : (it.kind === "CLOSE" ? "CLOSE" : "OPEN");
+                    let sessCheck = validateAmarSessionAllowed(parchiMarketObj, mappedSessCheck);
+                    if (!sessCheck.ok) {
+                        setInlineFeedback("ai-parchi-feedback", sessCheck.msg, "error");
+                        return;
+                    }
+                }
                 if (it.kind === "JODI" && !/^\d{2}$/.test(String(it.number))) {
                     setInlineFeedback("ai-parchi-feedback", `जोड़ी "${it.number}" ठीक 2 अंकों की होनी चाहिए!`, "error");
                     return;
@@ -2930,17 +3008,53 @@
             renderAmarGameChartContent();
         }
 
+        function saveAmarDailyChatBoxEdit(marketId) {
+            if (!isCurrentUserSuperAdmin()) return;
+            const inp = document.getElementById(`amar-daily-edit-${marketId}`);
+            if (!inp) return;
+            const todayKey = getTodayDateKey();
+            const rawLines = inp.value.split('\n').map(s => s.trim()).filter(Boolean);
+            amarDailyChatBoxes[marketId] = {
+                dateKey: todayKey,
+                entries: rawLines.map(txt => ({ time: getIndiaNow().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), text: txt }))
+            };
+            db.ref('amarDailyChatBoxes/' + marketId).set(amarDailyChatBoxes[marketId]);
+            renderAmarGameChartContent();
+        }
+
+        function appendToAmarDailyChatBox(marketId, entryText) {
+            const todayKey = getTodayDateKey();
+            let curBox = amarDailyChatBoxes[marketId] || { dateKey: todayKey, entries: [] };
+            if (curBox.dateKey !== todayKey) {
+                curBox = { dateKey: todayKey, entries: [] };
+            }
+            if (!Array.isArray(curBox.entries)) curBox.entries = [];
+            curBox.entries.push({
+                time: getIndiaNow().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                text: String(entryText || '').trim()
+            });
+            amarDailyChatBoxes[marketId] = curBox;
+            db.ref('amarDailyChatBoxes/' + marketId).set(curBox);
+        }
+
         function renderAmarGameChartContent() {
             const box = document.getElementById('amar-all-games-chart-container');
             if (!box) return;
             box.innerHTML = '';
             const days = ["सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि"];
             const isAdmin = isCurrentUserSuperAdmin();
+            const todayKey = getTodayDateKey();
 
             AMAR_MARKETS_CONFIG.forEach(m => {
                 let rec = amarChartRecords[m.id] || { w1: ["—","—","—","—","—","—"], w2: ["—","—","—","—","—","—"], customLink: "" };
                 let linkToUse = (rec.customLink && isSafeUrl(rec.customLink)) ? rec.customLink.trim() : m.chartUrl;
                 let isEditingThis = isAdmin && (openInlineEditMarketId === m.id);
+
+                let dailyBox = amarDailyChatBoxes[m.id] || { dateKey: todayKey, entries: [] };
+                let dailyEntries = (dailyBox.dateKey === todayKey && Array.isArray(dailyBox.entries)) ? dailyBox.entries : [];
+                let dailyHtml = dailyEntries.length === 0
+                    ? `<span style="font-size:0.74rem; color:#94a3b8;">आज अभी तक कोई Jodi / Patti दर्ज नहीं हुई है।</span>`
+                    : dailyEntries.map(e => `<span class="amar-today-chat-pill">🕒 ${escapeHtml(e.time || '')} • ${escapeHtml(e.text || '')}</span>`).join('');
 
                 let w1Html = (rec.w1 || ["—","—","—","—","—","—"]).map(v => `<div class="chart-day-box ${v !== '—' ? 'has-res' : ''}">${escapeHtml(v)}</div>`).join('');
                 let w2Html = (rec.w2 || ["—","—","—","—","—","—"]).map(v => `<div class="chart-day-box ${v !== '—' ? 'has-res' : ''}">${escapeHtml(v)}</div>`).join('');
@@ -2953,8 +3067,13 @@
                         w1Inputs += `<input type="text" class="inline-w1-${escapeHtml(m.id)}" placeholder="${days[i]}" value="${escapeHtml((rec.w1 && rec.w1[i]) || '—')}" style="margin:0; padding:5px 2px; font-size:0.72rem; background:#1e1b38; border:1px solid #f5b041;">`;
                         w2Inputs += `<input type="text" class="inline-w2-${escapeHtml(m.id)}" placeholder="${days[i]}" value="${escapeHtml((rec.w2 && rec.w2[i]) || '—')}" style="margin:0; padding:5px 2px; font-size:0.72rem; background:#1e1b38; border:1px solid #f5b041;">`;
                     }
+                    let existingDailyLines = dailyEntries.map(e => e.text).join('\n');
                     editorHtml = `
                         <div style="margin-top:10px; padding:10px; background:#0d0a1f; border:1px dashed #f5b041; border-radius:8px;">
+                            <div style="font-size:0.76rem; color:#4ade80; font-weight:bold; margin-bottom:3px;">✏️ आज का Chat Box (Jodi / Patti एडिट करें — हर एंट्री नई लाइन में):</div>
+                            <textarea id="amar-daily-edit-${escapeHtml(m.id)}" rows="2" style="margin:0 0 6px 0; padding:6px; font-size:0.78rem; text-align:left;" placeholder="उदा. Open Patti: 258-5 | Jodi: 58 | Close Patti: 300-8">${escapeHtml(existingDailyLines)}</textarea>
+                            <button type="button" class="chart-save-btn" style="width:100%; margin-bottom:8px; background:#0284c7;" onclick="saveAmarDailyChatBoxEdit('${escapeHtml(m.id)}')">💾 आज का Chat Box सेव करें</button>
+
                             <div style="font-size:0.76rem; color:#38bdf8; font-weight:bold; margin-bottom:3px;">ऑनलाइन चार्ट लिंक बॉक्स:</div>
                             <input type="text" id="inline-link-${escapeHtml(m.id)}" value="${escapeHtml(linkToUse)}" placeholder="यहाँ ऑनलाइन चार्ट लिंक डालें" style="margin:0 0 8px 0; padding:6px; font-size:0.78rem;">
 
@@ -2980,6 +3099,11 @@
                                 <a href="${escapeHtml(linkToUse)}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; font-size:0.78rem; font-weight:bold; text-decoration:underline;">🔗 ऑनलाइन चार्ट लिंक</a>
                                 ${isAdmin ? `<button type="button" class="chart-edit-btn" onclick="toggleInlineGameChartEdit('${escapeHtml(m.id)}')">✏️ Edit</button>` : ''}
                             </div>
+                        </div>
+
+                        <div class="amar-today-chat-box">
+                            <div style="font-size:0.74rem; color:#7ef9ff; font-weight:900; margin-bottom:4px;">📅 आज का ${escapeHtml(m.name)} Box (Jodi & Patti/Pana):</div>
+                            <div>${dailyHtml}</div>
                         </div>
 
                         <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; margin-top:8px; font-size:0.7rem; color:#94a3b8; text-align:center; font-weight:bold;">
@@ -3062,7 +3186,7 @@
             if (!m) return;
             selectedAmarMarketId = marketId;
             document.getElementById('amar-selected-market-title').innerText = `🎲 ${m.name}`;
-            document.getElementById('amar-selected-market-timing').innerText = `Open: ${m.openTime} | Close: ${m.closeTime} (1 मिनट पहले लॉक)`;
+            document.getElementById('amar-selected-market-timing').innerText = `Open: ${m.openTime} | Close: ${m.closeTime} (10 मिनट पहले यूज़र लॉक)`;
             document.getElementById('amar-market-modes-modal').classList.remove('hidden');
         }
 
@@ -3075,7 +3199,11 @@
             let state = getAmarMarketState(m);
 
             if (mode === 'Jodi Digit' && !state.jodiAllowed) {
-                setInlineFeedback("amar-mode-feedback", `⚠️ ${m.name} में जोड़ी (Jodi) बंद है (ओपन आ चुका है या 1 मिनट पहले लॉक है)।`, "error");
+                setInlineFeedback("amar-mode-feedback", `⚠️ ${m.name} में जोड़ी (Jodi) बंद है (ओपन समय से 10 मिनट पहले लॉक या ओपन आ चुका है)।`, "error");
+                return;
+            }
+            if (state.lockedForOpen && state.lockedForClose) {
+                setInlineFeedback("amar-mode-feedback", `⚠️ ${m.name} की बुकिंग Close समय से 10 मिनट पहले लॉक हो चुकी है।`, "error");
                 return;
             }
 
@@ -3084,7 +3212,7 @@
             renderAmarTempBids();
 
             document.getElementById('amar-board-heading').innerText = `${m.name} - ${mode}`;
-            document.getElementById('amar-board-lock-info').innerText = `⏰ बुकिंग नियम: Open/Close समय से 1 मिनट पहले लॉक`;
+            document.getElementById('amar-board-lock-info').innerText = `⏰ बुकिंग नियम: Open से 10 मिनट पहले OPEN/JODI लॉक और Close से 10 मिनट पहले CLOSE लॉक`;
 
             const sessSel = document.getElementById('amar-session-select');
             sessSel.innerHTML = '';
@@ -3138,9 +3266,9 @@
 
         function validateAmarSessionAllowed(m, sess) {
             let state = getAmarMarketState(m);
-            if (sess === "JODI" && !state.jodiAllowed) return { ok: false, msg: `⚠️ ${m.name} में जोड़ी बंद है!` };
-            if (sess === "OPEN" && (state.lockedForOpen || state.openDeclared)) return { ok: false, msg: `⚠️ ${m.name} की OPEN बुकिंग बंद/लॉक है!` };
-            if (sess === "CLOSE" && state.lockedForClose) return { ok: false, msg: `⚠️ ${m.name} की CLOSE बुकिंग समय से 1 मिनट पहले लॉक हो चुकी है!` };
+            if (sess === "JODI" && !state.jodiAllowed) return { ok: false, msg: `⚠️ ${m.name} में जोड़ी बंद है (ओपन से 10 मिनट पहले लॉक)!` };
+            if (sess === "OPEN" && (state.lockedForOpen || state.openDeclared)) return { ok: false, msg: `⚠️ ${m.name} की OPEN बुकिंग समय से 10 मिनट पहले लॉक हो चुकी है!` };
+            if (sess === "CLOSE" && state.lockedForClose) return { ok: false, msg: `⚠️ ${m.name} की CLOSE बुकिंग समय से 10 मिनट पहले लॉक हो चुकी है!` };
             return { ok: true };
         }
 
@@ -3355,9 +3483,35 @@
 
             if (activeAmarAdminSubPage === 'res') {
                 let autoJodiPreview = (resObj.openDigit && resObj.closeDigit) ? `${resObj.openDigit}${resObj.closeDigit}` : (resObj.jodi || "--");
+                let pendingObj = amarPendingTimers[m.id] || null;
+                let pendingTimerHtml = '';
+                if (pendingObj && pendingObj.expiresAt) {
+                    let remSec = Math.max(0, Math.ceil((pendingObj.expiresAt - Date.now()) / 1000));
+                    let previewText = pendingObj.stage === 'OPEN'
+                        ? `OPEN: ${pendingObj.openPatti}-${pendingObj.openDigit}`
+                        : `CLOSE + JODI: ${pendingObj.openPatti}-${pendingObj.openDigit}${pendingObj.closeDigit}-${pendingObj.closePatti}`;
+                    pendingTimerHtml = `
+                        <div class="amar-countdown-box">
+                            <div style="font-size:0.8rem; color:#fde047; font-weight:900;">⏳ 1-मिनट Auto-Publish टाइमर चालू (${escapeHtml(previewText)})</div>
+                            <div class="amar-countdown-digits" id="amar-pending-sec-${escapeHtml(m.id)}">${remSec}s</div>
+                            <div style="font-size:0.74rem; color:#e0e7ff; margin-bottom:6px;">0 होते ही यूज़र्स को दिखेगा व जीतने वालों को ऑटो-पेआउट होगा।</div>
+                            <button type="button" class="btn" style="margin:0; padding:8px; font-size:0.82rem; background:#dc2626; color:#fff;" onclick="cancelAmarPendingTimer('${escapeHtml(m.id)}')">🛑 रोकें / कैंसल / एडिट करें</button>
+                        </div>
+                    `;
+                }
+
+                let lockStatusBanner = resObj.isFinalLocked
+                    ? `<div style="background:#3b0d11; border:1px solid #f87171; border-radius:7px; padding:7px; margin-bottom:8px; font-size:0.8rem; color:#fecaca;">
+                           🔒 <b>Close रिजल्ट लॉक हो चुका है</b> (Admin चाहें तो नीचे एडिट कर सकते हैं)
+                       </div>`
+                    : '';
+
                 ws.innerHTML = `
                     <div class="admin-input-group" style="border-style:solid; border-color:#f5b041;">
-                        <h4 style="color:#ffd166; font-size:0.98rem; margin-bottom:8px;">🎯 ${escapeHtml(m.name)} — रिजल्ट पेज व मार्केट कंट्रोल</h4>
+                        <h4 style="color:#ffd166; font-size:0.98rem; margin-bottom:8px;">🎯 ${escapeHtml(m.name)} — रिजल्ट पेज व 60s टाइमर कंट्रोल</h4>
+                        <div id="amar-admin-res-feedback" class="inline-feedback-banner hidden"></div>
+                        ${lockStatusBanner}
+                        ${pendingTimerHtml}
 
                         <div style="background:#10101c; padding:8px; border-radius:8px; border:1px solid #f59e0b; margin-bottom:10px;">
                             <div style="font-size:0.8rem; color:#ffd166; font-weight:bold; margin-bottom:6px;">🔐 मार्केट स्थिति (${escapeHtml(fState)}):</div>
@@ -3373,16 +3527,16 @@
                             <input type="text" id="ws-open-patti" placeholder="Open Pana (उदा. 258)" maxlength="3" value="${escapeHtml(resObj.openPatti || '')}" oninput="updateAdminPattiStrip(this.value, 'ws-open-patti', 'ws-open-patti-strip')">
                             <div id="ws-open-patti-strip" class="pana-horizontal-strip hidden"></div>
                             <input type="text" id="ws-open-digit" placeholder="Open Digit (0-9)" maxlength="1" value="${escapeHtml(resObj.openDigit || '')}">
-                            <button type="button" class="btn" style="background:#0284c7; color:#fff; padding:8px; font-size:0.85rem;" onclick="saveAmarGameOpenStep()">✅ Open Result सेव करें</button>
+                            <button type="button" class="btn" style="background:#0284c7; color:#fff; padding:8px; font-size:0.85rem;" onclick="saveAmarGameOpenStep()">✅ OK — Open Result (60s टाइमर शुरू)</button>
                         </div>
 
                         <div style="background:#120f24; padding:8px; border-radius:8px; border:1px solid #4ade80;">
-                            <div style="font-size:0.84rem; color:#4ade80; font-weight:bold; margin-bottom:4px;">2️⃣ फिर Close डालें (क्लोज पत्ती + अंक):</div>
+                            <div style="font-size:0.84rem; color:#4ade80; font-weight:bold; margin-bottom:4px;">2️⃣ फिर Close डालें (क्लोज पत्ती + अंक — OK करते ही लॉक):</div>
                             <input type="text" id="ws-close-patti" placeholder="Close Pana (उदा. 300)" maxlength="3" value="${escapeHtml(resObj.closePatti || '')}" oninput="updateAdminPattiStrip(this.value, 'ws-close-patti', 'ws-close-patti-strip')">
                             <div id="ws-close-patti-strip" class="pana-horizontal-strip hidden"></div>
                             <input type="text" id="ws-close-digit" placeholder="Close Digit (0-9)" maxlength="1" value="${escapeHtml(resObj.closeDigit || '')}">
                             <div style="font-size:0.8rem; color:#ffd166; margin:4px 0;">🔢 बनने वाली Jodi: <b id="ws-jodi-preview">${escapeHtml(autoJodiPreview)}</b></div>
-                            <button type="button" class="btn" style="background:#16a34a; color:#fff; padding:9px; font-size:0.9rem;" onclick="saveAmarGameCloseAndPayStep()">🚀 Close + Jodi सेव करें व भुगतान करें</button>
+                            <button type="button" class="btn" style="background:#16a34a; color:#fff; padding:9px; font-size:0.9rem;" onclick="saveAmarGameCloseAndPayStep()">🚀 OK — Close + Jodi लॉक व 60s टाइमर शुरू</button>
                         </div>
                     </div>
                 `;
@@ -3514,6 +3668,134 @@
             return 140;
         }
 
+        function cancelAmarPendingTimer(mId) {
+            if (!isCurrentUserSuperAdmin()) return;
+            delete amarPendingTimers[mId];
+            db.ref('amarPendingTimers/' + mId).remove();
+            renderAmarAdminWorkspace(mId);
+            setInlineFeedback("amar-admin-res-feedback", "🛑 1-मिनट टाइमर रोक दिया गया है। अब आप रिजल्ट एडिट कर सकते हैं।", "info");
+        }
+
+        function finalizeAmarPendingResult(mId) {
+            const pendingObj = amarPendingTimers[mId];
+            if (!pendingObj) return;
+            delete amarPendingTimers[mId];
+            db.ref('amarPendingTimers/' + mId).remove();
+
+            let prev = amarMarketResults[mId] || {};
+            const todayKey = getTodayDateKey();
+
+            if (pendingObj.stage === 'OPEN') {
+                const opP = pendingObj.openPatti;
+                const opD = pendingObj.openDigit;
+                const openDisp = `${opP}-${opD}`;
+
+                amarMarketResults[mId] = {
+                    ...prev,
+                    openPatti: opP,
+                    openDigit: opD,
+                    openDisplay: openDisp,
+                    display: prev.closeDisplay ? `${openDisp}-${prev.closeDisplay}` : `<span class="open-pill-glow">OPEN</span> ${openDisp}`
+                };
+                db.ref('amarMarketResults/' + mId).set(amarMarketResults[mId]);
+
+                let updated = false;
+                amarBets = amarBets.map(b => {
+                    if (b.paidOut || b.marketId !== mId || (b.dateKey || todayKey) !== todayKey) return b;
+                    let winPts = 0;
+                    if (b.session === 'OPEN' && b.gameMode === 'Single Digit' && String(b.number) === opD) {
+                        winPts = Math.round((Number(b.points) || 0) * 9.75);
+                    } else if (b.session === 'OPEN' && b.gameMode && b.gameMode.includes('Pana') && String(b.number) === opP) {
+                        winPts = (Number(b.points) || 0) * getAmarPanaRateMultiplier(String(b.number), b.gameMode);
+                    }
+                    if (winPts > 0) {
+                        creditUserWinPoints(b.user, winPts);
+                        markBetAndParchiWonInHistory(b.user, b.id, b.parchiId, b.parchiItemIdx, winPts);
+                        updated = true;
+                        return { ...b, paidOut: true, wonPoints: winPts };
+                    }
+                    return b;
+                });
+                if (updated) db.ref('amarBets').set(amarBets);
+
+                saveToAmar2WeekChart(mId, openDisp);
+                appendToAmarDailyChatBox(mId, `OPEN Patti: ${opP}-${opD}`);
+            } else if (pendingObj.stage === 'CLOSE') {
+                const opP = pendingObj.openPatti;
+                const opD = pendingObj.openDigit;
+                const clP = pendingObj.closePatti;
+                const clD = pendingObj.closeDigit;
+                const jodi = `${opD}${clD}`;
+                const openDisp = opP ? `${opP}-${opD}` : opD;
+                const closeDisp = `${clD}-${clP}`;
+                const fullDisp = opP ? `${opP}-${jodi}-${clP}` : `${jodi}-${clP}`;
+
+                amarMarketResults[mId] = {
+                    ...prev,
+                    openPatti: opP,
+                    openDigit: opD,
+                    closePatti: clP,
+                    closeDigit: clD,
+                    jodi: jodi,
+                    openDisplay: openDisp,
+                    closeDisplay: closeDisp,
+                    display: fullDisp,
+                    isFinalLocked: true
+                };
+                db.ref('amarMarketResults/' + mId).set(amarMarketResults[mId]);
+
+                let updated = false;
+                amarBets = amarBets.map(b => {
+                    if (b.paidOut || b.marketId !== mId || (b.dateKey || todayKey) !== todayKey) return b;
+                    let winPts = 0;
+                    if (b.session === 'CLOSE' && b.gameMode === 'Single Digit' && String(b.number) === clD) {
+                        winPts = Math.round((Number(b.points) || 0) * 9.75);
+                    } else if (b.session === 'CLOSE' && b.gameMode && b.gameMode.includes('Pana') && String(b.number) === clP) {
+                        winPts = (Number(b.points) || 0) * getAmarPanaRateMultiplier(String(b.number), b.gameMode);
+                    } else if (b.gameMode === 'Jodi Digit' && String(b.number) === jodi) {
+                        winPts = Math.round((Number(b.points) || 0) * 11);
+                    }
+                    if (winPts > 0) {
+                        creditUserWinPoints(b.user, winPts);
+                        markBetAndParchiWonInHistory(b.user, b.id, b.parchiId, b.parchiItemIdx, winPts);
+                        updated = true;
+                        return { ...b, paidOut: true, wonPoints: winPts };
+                    }
+                    return b;
+                });
+                if (updated) db.ref('amarBets').set(amarBets);
+
+                saveToAmar2WeekChart(mId, `${jodi} (${clP})`);
+                appendToAmarDailyChatBox(mId, `Jodi: ${jodi} | Close Patti: ${clD}-${clP}`);
+            }
+
+            renderAmarMarketsGrid();
+            renderAmarAdminBoxes();
+            if (!document.getElementById('amar-admin-section').classList.contains('hidden')) {
+                renderAmarAdminWorkspace(activeAmarAdminMarketId);
+            }
+            const mbModal = document.getElementById('my-bets-modal');
+            if (mbModal && !mbModal.classList.contains('hidden')) {
+                renderMyBetsContent();
+            }
+        }
+
+        function tickAmarPendingTimers() {
+            const keys = Object.keys(amarPendingTimers || {});
+            if (!keys.length) return;
+            const nowMs = Date.now();
+            keys.forEach(mId => {
+                const p = amarPendingTimers[mId];
+                if (!p || !p.expiresAt) return;
+                const remSec = Math.max(0, Math.ceil((p.expiresAt - nowMs) / 1000));
+                const el = document.getElementById(`amar-pending-sec-${mId}`);
+                if (el) el.innerText = `${remSec}s`;
+                if (remSec <= 0) {
+                    finalizeAmarPendingResult(mId);
+                }
+            });
+        }
+
         function saveAmarGameOpenStep() {
             if (!isCurrentUserSuperAdmin()) return;
             const mId = activeAmarAdminMarketId;
@@ -3521,49 +3803,23 @@
             let opD = document.getElementById('ws-open-digit').value.trim();
             const validPattis = getAllSystemValidPattis();
             if (!opP || !validPattis.includes(opP)) {
-                setInlineFeedback("admin-inline-feedback", "⚠️ केवल मान्य (Single/Double/Triple) पत्ती ही डालें!", "error");
+                setInlineFeedback("amar-admin-res-feedback", "⚠️ केवल मान्य (Single/Double/Triple) पत्ती ही डालें!", "error");
                 return;
             }
             if (!/^[0-9]$/.test(opD)) {
-                setInlineFeedback("admin-inline-feedback", "⚠️ ओपन अंक 0 से 9 के बीच होना चाहिए!", "error");
+                setInlineFeedback("amar-admin-res-feedback", "⚠️ ओपन अंक 0 से 9 के बीच होना चाहिए!", "error");
                 return;
             }
 
-            let prev = amarMarketResults[mId] || {};
-            let openDisp = `${opP}-${opD}`;
-            amarMarketResults[mId] = {
-                ...prev,
+            amarPendingTimers[mId] = {
+                stage: 'OPEN',
                 openPatti: opP,
                 openDigit: opD,
-                openDisplay: openDisp,
-                display: prev.closeDisplay ? `${openDisp}-${prev.closeDisplay}` : `<span class="open-pill-glow">OPEN</span> ${openDisp}`
+                expiresAt: Date.now() + 60000
             };
-            db.ref('amarMarketResults/' + mId).set(amarMarketResults[mId]);
-
-            let updated = false;
-            amarBets = amarBets.map(b => {
-                if (b.paidOut || b.marketId !== mId) return b;
-                let winPts = 0;
-                if (b.session === 'OPEN' && b.gameMode === 'Single Digit' && String(b.number) === opD) {
-                    winPts = Math.round((Number(b.points) || 0) * 9.75);
-                } else if (b.session === 'OPEN' && b.gameMode && b.gameMode.includes('Pana') && String(b.number) === opP) {
-                    winPts = (Number(b.points) || 0) * getAmarPanaRateMultiplier(String(b.number), b.gameMode);
-                }
-                if (winPts > 0) {
-                    creditUserWinPoints(b.user, winPts);
-                    markBetAndParchiWonInHistory(b.user, b.id, b.parchiId, b.parchiItemIdx, winPts);
-                    updated = true;
-                    return { ...b, paidOut: true, wonPoints: winPts };
-                }
-                return b;
-            });
-            if (updated) db.ref('amarBets').set(amarBets);
-
-            saveToAmar2WeekChart(mId, openDisp);
-            renderAmarMarketsGrid();
-            renderAmarAdminBoxes();
+            db.ref('amarPendingTimers/' + mId).set(amarPendingTimers[mId]);
             renderAmarAdminWorkspace(mId);
-            setInlineFeedback("admin-inline-feedback", `✅ Open Result (${openDisp}) सेव व विजेता भुगतान हो गया!`, "success");
+            setInlineFeedback("amar-admin-res-feedback", `⏳ Open (${opP}-${opD}) के लिए 60 सेकंड का काउंटडाउन शुरू हो गया है! 0 होते ही पक्का होकर पब्लिश व भुगतान होगा।`, "info");
         }
 
         function saveAmarGameCloseAndPayStep() {
@@ -3577,62 +3833,38 @@
 
             const validPattis = getAllSystemValidPattis();
             if (!clP || !validPattis.includes(clP)) {
-                setInlineFeedback("admin-inline-feedback", "⚠️ केवल मान्य (Single/Double/Triple) क्लोज पत्ती ही डालें!", "error");
+                setInlineFeedback("amar-admin-res-feedback", "⚠️ केवल मान्य (Single/Double/Triple) क्लोज पत्ती ही डालें!", "error");
                 return;
             }
             if (!/^[0-9]$/.test(clD)) {
-                setInlineFeedback("admin-inline-feedback", "⚠️ क्लोज अंक 0 से 9 के बीच होना चाहिए!", "error");
+                setInlineFeedback("amar-admin-res-feedback", "⚠️ क्लोज अंक 0 से 9 के बीच होना चाहिए!", "error");
                 return;
             }
             if (!/^[0-9]$/.test(opD)) {
-                setInlineFeedback("admin-inline-feedback", "⚠️ पहले ओपन अंक (0-9) डालें या सेव करें!", "error");
+                setInlineFeedback("amar-admin-res-feedback", "⚠️ पहले ओपन अंक (0-9) डालें या सेव करें!", "error");
                 return;
             }
 
-            let jodi = `${opD}${clD}`;
-            let openDisp = opP ? `${opP}-${opD}` : opD;
-            let closeDisp = `${clD}-${clP}`;
-            let fullDisp = opP ? `${opP}-${jodi}-${clP}` : `${jodi}-${clP}`;
-
+            // Lock result immediately when Admin clicks OK on Close (Admin can still edit)
             amarMarketResults[mId] = {
                 ...prev,
+                isFinalLocked: true
+            };
+            db.ref('amarMarketResults/' + mId + '/isFinalLocked').set(true);
+
+            amarPendingTimers[mId] = {
+                stage: 'CLOSE',
                 openPatti: opP,
                 openDigit: opD,
                 closePatti: clP,
                 closeDigit: clD,
-                jodi: jodi,
-                openDisplay: openDisp,
-                closeDisplay: closeDisp,
-                display: fullDisp
+                expiresAt: Date.now() + 60000
             };
-            db.ref('amarMarketResults/' + mId).set(amarMarketResults[mId]);
-
-            let updated = false;
-            amarBets = amarBets.map(b => {
-                if (b.paidOut || b.marketId !== mId) return b;
-                let winPts = 0;
-                if (b.session === 'CLOSE' && b.gameMode === 'Single Digit' && String(b.number) === clD) {
-                    winPts = Math.round((Number(b.points) || 0) * 9.75);
-                } else if (b.session === 'CLOSE' && b.gameMode && b.gameMode.includes('Pana') && String(b.number) === clP) {
-                    winPts = (Number(b.points) || 0) * getAmarPanaRateMultiplier(String(b.number), b.gameMode);
-                } else if (b.gameMode === 'Jodi Digit' && String(b.number) === jodi) {
-                    winPts = Math.round((Number(b.points) || 0) * 11);
-                }
-                if (winPts > 0) {
-                    creditUserWinPoints(b.user, winPts);
-                    markBetAndParchiWonInHistory(b.user, b.id, b.parchiId, b.parchiItemIdx, winPts);
-                    updated = true;
-                    return { ...b, paidOut: true, wonPoints: winPts };
-                }
-                return b;
-            });
-            if (updated) db.ref('amarBets').set(amarBets);
-
-            saveToAmar2WeekChart(mId, `${opD}${clD} (${clP})`);
+            db.ref('amarPendingTimers/' + mId).set(amarPendingTimers[mId]);
             renderAmarMarketsGrid();
             renderAmarAdminBoxes();
             renderAmarAdminWorkspace(mId);
-            setInlineFeedback("admin-inline-feedback", `✅ Close (${closeDisp}) व Jodi (${jodi}) सेव व भुगतान हो गया!`, "success");
+            setInlineFeedback("amar-admin-res-feedback", `🔒 Close लॉक हो गया और 60 सेकंड का टाइमर शुरू है! 0 होते ही Jodi (${opD}${clD}) व Close यूज़र्स को दिखेगा व पेआउट होगा।`, "info");
         }
 
         function renderAmarAdminHelpInbox() {
@@ -4346,6 +4578,7 @@
             }
 
             updateEveningAmarHeaderBranding();
+            tickAmarPendingTimers();
             if (isGoodLuckMainScreenActive() && !closedNow && isLast60Sec) {
                 playTickSound(currentType, true);
             }
@@ -5826,6 +6059,21 @@
         db.ref('amarChartRecords').on('value', snap => {
             if (snap.exists()) {
                 amarChartRecords = snap.val() || {};
+            }
+        });
+
+        db.ref('amarDailyChatBoxes').on('value', snap => {
+            amarDailyChatBoxes = snap.exists() ? (snap.val() || {}) : {};
+            const chartModal = document.getElementById('amar-game-chart-modal');
+            if (chartModal && !chartModal.classList.contains('hidden')) {
+                renderAmarGameChartContent();
+            }
+        });
+
+        db.ref('amarPendingTimers').on('value', snap => {
+            amarPendingTimers = snap.exists() ? (snap.val() || {}) : {};
+            if (!document.getElementById('amar-admin-section').classList.contains('hidden')) {
+                renderAmarAdminWorkspace(activeAmarAdminMarketId);
             }
         });
 
