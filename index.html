@@ -1754,8 +1754,9 @@
             document.addEventListener(evtName, unlockAudioOnUserTouch, { passive: true });
         });
 
-        function playTickSound() {
+        function playTickSound(lotteryType = 'shubh', isLastMinuteAlert = false) {
             try {
+                if (!isGoodLuckMainScreenActive()) return;
                 if (!audioCtx) {
                     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
                     if (AudioContextClass) audioCtx = new AudioContextClass();
@@ -1766,14 +1767,22 @@
                 }
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(950, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.09, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+                if (lotteryType === 'dhan') {
+                    // धन लक्ष्मी (30 मिनट): अलग गहरी अलर्ट टोन
+                    osc.type = isLastMinuteAlert ? 'triangle' : 'sine';
+                    osc.frequency.setValueAtTime(isLastMinuteAlert ? 680 : 540, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(isLastMinuteAlert ? 0.14 : 0.08, audioCtx.currentTime);
+                } else {
+                    // शुभ लक्ष्मी (15 मिनट): अलग तेज़ अलर्ट टोन
+                    osc.type = isLastMinuteAlert ? 'square' : 'sine';
+                    osc.frequency.setValueAtTime(isLastMinuteAlert ? 1180 : 950, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(isLastMinuteAlert ? 0.12 : 0.08, audioCtx.currentTime);
+                }
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.09);
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.09);
+                osc.stop(audioCtx.currentTime + 0.1);
             } catch (e) {}
         }
 
@@ -2834,6 +2843,7 @@
 
         function openAmarDuniyaPage() {
             window.history.pushState({ page: "amar_duniya" }, "", "#amar-duniya");
+            updateEveningAmarHeaderBranding();
             document.getElementById('main-section').classList.add('hidden');
             document.getElementById('admin-section').classList.add('hidden');
             document.getElementById('amar-admin-section').classList.add('hidden');
@@ -3825,7 +3835,7 @@
             const hr = getIndiaNow().getHours();
             const amarHeading = document.getElementById('amar-duniya-main-heading');
             if (amarHeading) {
-                amarHeading.innerText = (hr >= 18 || hr < 4) ? "Amar duniya 🌙 (Evening Special)" : "Amar duniya";
+                amarHeading.innerText = (hr >= 18 || hr < 4) ? "AMAR DUNIYA (EVENING)" : "Amar duniya";
             }
         }
 
@@ -3928,6 +3938,10 @@
             clearInlineFeedback("board-feedback");
             if (isLotteryClosedNow()) {
                 setInlineFeedback("main-inline-feedback", MORNING_CLOSED_MSG, "error");
+                return;
+            }
+            if (isBetSubmitLocked()) {
+                setInlineFeedback("main-inline-feedback", "🔒 आखिरी 1 मिनट चल रहा है — इस राउंड के सभी बॉक्स लॉक हो चुके हैं!", "error");
                 return;
             }
             currentGameMode = mode;
@@ -4287,6 +4301,11 @@
                 if (isLast60Sec) timerBox.classList.add('locked-alert');
                 else timerBox.classList.remove('locked-alert');
             }
+            const gameCards = document.querySelectorAll('#luck-game-cards-grid .dashboard-card');
+            gameCards.forEach(card => {
+                if (isLast60Sec || closedNow) card.classList.add('slot-locked-card');
+                else card.classList.remove('slot-locked-card');
+            });
 
             const activeInfo = getCurrentActiveSlotObject();
             if (hintEl) {
@@ -4326,8 +4345,9 @@
                 }
             }
 
-            if (isGoodLuckMainScreenActive() && !closedNow) {
-                playTickSound();
+            updateEveningAmarHeaderBranding();
+            if (isGoodLuckMainScreenActive() && !closedNow && isLast60Sec) {
+                playTickSound(currentType, true);
             }
         }
 
