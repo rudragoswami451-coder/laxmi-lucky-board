@@ -1174,7 +1174,7 @@
 
         <div class="admin-nav">
             <button type="button" class="admin-nav-btn active" id="adm-tab-res" onclick="switchAdminTab('res')">🎯 रिजल्ट्स</button>
-            <button type="button" class="admin-nav-btn" id="adm-tab-users" onclick="switchAdminTab('users')">👥 यूज़र्स</button>
+            <button type="button" class="admin-nav-btn" id="adm-tab-users" onclick="switchAdminTab('users')">👥 यूज़र्स <span id="badge-users-chat-count" class="count-pill-badge hidden">0</span></button>
             <button type="button" class="admin-nav-btn" id="adm-tab-qr" onclick="switchAdminTab('qr')">💳 QR सेट</button>
             <button type="button" class="admin-nav-btn" id="adm-tab-bids" onclick="switchAdminTab('bids')">📊 दांव</button>
             <button type="button" class="admin-nav-btn" id="adm-tab-load" onclick="switchAdminTab('load')" style="background:#1e3a8a; color:#fde047;">⚡ लोड</button>
@@ -1374,7 +1374,7 @@
                 </div>
                 <input type="text" id="bot-user-input" placeholder="यहाँ अपना सवाल या सहायता संदेश लिखें..." style="margin:5px 0; font-size:0.85rem; padding:8px;">
                 <div style="display:flex; gap:5px;">
-                    <button type="button" class="btn" style="margin:0; padding:8px; font-size:0.85rem;" onclick="askHelpBot()">सवाल पूछें</button>
+                    <button type="button" class="btn" style="margin:0; padding:8px; font-size:0.85rem; background:#2563eb; color:#fff;" onclick="sendOnlineAdminChatMessage()">🟢 Online Admin</button>
                     <button type="button" class="btn" style="margin:0; padding:8px; font-size:0.85rem; background:#28a745; color:#fff;" onclick="sendRequestToAdmin()">सहायता रिक्वेस्ट भेजें</button>
                 </div>
             </div>
@@ -1413,8 +1413,6 @@
                 <button type="button" id="mybet-tab-shubh" class="mybet-subtab-btn active-shubh" onclick="switchMyBetLuckSubTab('shubh')">⭐ शुभ लक्ष्मी (15 मि.)</button>
                 <button type="button" id="mybet-tab-dhan" class="mybet-subtab-btn" onclick="switchMyBetLuckSubTab('dhan')">💰 धन लक्ष्मी (30 मि.)</button>
             </div>
-
-            <div id="mybet-live-summary" class="mybet-live-summary-bar"></div>
 
             <div id="my-bets-container" style="max-height: 360px; overflow-y: auto; text-align: left;"></div>
 
@@ -2170,7 +2168,8 @@
             const pendingDeps = (depositRequests || []).filter(r => r && r.status === 'pending').length;
             const pendingWits = (withdrawRequests || []).filter(r => r && r.status === 'pending').length;
             const pendingReqs = (helpRequests || []).filter(r => r && r.status === 'pending').length;
-            const totalPending = pendingDeps + pendingWits + pendingReqs;
+            const unreadUserChats = Object.values(liveAdminUserChats || {}).filter(list => Array.isArray(list) && list.length > 0 && list[list.length - 1].sender === 'user').length;
+            const totalPending = pendingDeps + pendingWits + pendingReqs + unreadUserChats;
 
             const setBadge = (id, count) => {
                 const el = document.getElementById(id);
@@ -2186,6 +2185,7 @@
             setBadge('badge-dep-count', pendingDeps);
             setBadge('badge-wit-count', pendingWits);
             setBadge('badge-req-count', pendingReqs);
+            setBadge('badge-users-chat-count', unreadUserChats);
             setBadge('admin-trigger-badge', totalPending);
             setBadge('user-menu-help-badge', pendingReqs);
             setBadge('dropdown-help-badge', pendingReqs);
@@ -4351,42 +4351,56 @@
             }
         }
 
+        function normalizeSlotTimeStr(s) {
+            return String(s || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function computeLuckBetWinPoints(b, opPatti, opDigit, clPatti, clDigit, jodiVal, isCloseSettled) {
+            let winPts = 0;
+            const pts = Number(b.points) || 0;
+            const num = String(b.number || '').trim();
+            const gType = String(b.gameType || '').toUpperCase();
+            const gMode = String(b.gameMode || '');
+
+            if (gType === 'OPEN' && opDigit !== '') {
+                if (gMode === 'Single Digit' && num === String(opDigit)) winPts = pts * 10;
+                else if (gMode === 'Single Pana' && num === String(opPatti)) winPts = pts * 150;
+                else if (gMode === 'Double Pana' && num === String(opPatti)) winPts = pts * 300;
+                else if (gMode === 'Triple Pana' && num === String(opPatti)) winPts = pts * 700;
+                else if (gMode === 'Odd Even') {
+                    const isOdd = (Number(opDigit) % 2 === 1);
+                    if ((num.toUpperCase() === 'ODD' && isOdd) || (num.toUpperCase() === 'EVEN' && !isOdd)) winPts = Math.round(pts * 1.9);
+                }
+            } else if (isCloseSettled && (gType === 'CLOSE' || gType === 'JODI')) {
+                if (gMode === 'Single Digit' && gType === 'CLOSE' && num === String(clDigit)) winPts = pts * 10;
+                else if (gMode === 'Single Pana' && num === String(clPatti)) winPts = pts * 150;
+                else if (gMode === 'Double Pana' && num === String(clPatti)) winPts = pts * 300;
+                else if (gMode === 'Triple Pana' && num === String(clPatti)) winPts = pts * 700;
+                else if (gMode === 'Jodi Digit' && num === String(jodiVal)) winPts = pts * 100;
+                else if (gMode === 'Odd Even') {
+                    const isOdd = (Number(clDigit) % 2 === 1);
+                    if ((num.toUpperCase() === 'ODD' && isOdd) || (num.toUpperCase() === 'EVEN' && !isOdd)) winPts = Math.round(pts * 1.9);
+                } else if (gMode === 'Half Sangam' && (num === `${opPatti}-${clDigit}` || num === `${opDigit}-${clPatti}`)) {
+                    winPts = pts * 1000;
+                } else if (gMode === 'Full Sangam' && num === `${opPatti}-${clPatti}`) {
+                    winPts = pts * 10000;
+                }
+            }
+            return winPts;
+        }
+
         function settleBetsForSlot(lotteryType, slotStart, slotEnd, opPatti, opDigit, clPatti, clDigit, jodiVal, isCloseSettled) {
             const list = lotteryType === 'shubh' ? shubhBets : dhanBets;
-            const slotStr = `${slotStart} - ${slotEnd}`;
+            const slotStr = normalizeSlotTimeStr(`${slotStart} - ${slotEnd}`);
+            const todayKey = getTodayDateKey();
             let anyPaid = false;
 
             const updatedList = (list || []).map(b => {
-                if (b.paidOut || b.slotTime !== slotStr) return b;
-                let winPts = 0;
-                const pts = Number(b.points) || 0;
-                const num = String(b.number).trim();
+                if (!b || b.paidOut) return b;
+                if ((b.dateKey || todayKey) !== todayKey) return b;
+                if (normalizeSlotTimeStr(b.slotTime) !== slotStr) return b;
 
-                if (b.gameType === 'OPEN') {
-                    if (b.gameMode === 'Single Digit' && num === opDigit) winPts = pts * 10;
-                    else if (b.gameMode === 'Single Pana' && num === opPatti) winPts = pts * 150;
-                    else if (b.gameMode === 'Double Pana' && num === opPatti) winPts = pts * 300;
-                    else if (b.gameMode === 'Triple Pana' && num === opPatti) winPts = pts * 700;
-                    else if (b.gameMode === 'Odd Even') {
-                        const isOdd = (Number(opDigit) % 2 === 1);
-                        if ((num.toUpperCase() === 'ODD' && isOdd) || (num.toUpperCase() === 'EVEN' && !isOdd)) winPts = Math.round(pts * 1.9);
-                    }
-                } else if (isCloseSettled && (b.gameType === 'CLOSE' || b.gameType === 'JODI')) {
-                    if (b.gameMode === 'Single Digit' && b.gameType === 'CLOSE' && num === clDigit) winPts = pts * 10;
-                    else if (b.gameMode === 'Single Pana' && num === clPatti) winPts = pts * 150;
-                    else if (b.gameMode === 'Double Pana' && num === clPatti) winPts = pts * 300;
-                    else if (b.gameMode === 'Triple Pana' && num === clPatti) winPts = pts * 700;
-                    else if (b.gameMode === 'Jodi Digit' && num === jodiVal) winPts = pts * 100;
-                    else if (b.gameMode === 'Odd Even') {
-                        const isOdd = (Number(clDigit) % 2 === 1);
-                        if ((num.toUpperCase() === 'ODD' && isOdd) || (num.toUpperCase() === 'EVEN' && !isOdd)) winPts = Math.round(pts * 1.9);
-                    } else if (b.gameMode === 'Half Sangam' && (num === `${opPatti}-${clDigit}` || num === `${opDigit}-${clPatti}`)) {
-                        winPts = pts * 1000;
-                    } else if (b.gameMode === 'Full Sangam' && num === `${opPatti}-${clPatti}`) {
-                        winPts = pts * 10000;
-                    }
-                }
-
+                const winPts = computeLuckBetWinPoints(b, opPatti, opDigit, clPatti, clDigit, jodiVal, isCloseSettled);
                 if (winPts > 0) {
                     anyPaid = true;
                     creditUserWinPoints(b.user, winPts);
@@ -4632,17 +4646,36 @@
                 return;
             }
 
-            phones.forEach(ph => {
+            // Sort users who have recent user chat messages to top
+            const sortedPhones = [...phones].sort((a, b) => {
+                const aMsgs = Array.isArray(liveAdminUserChats[a]) ? liveAdminUserChats[a] : [];
+                const bMsgs = Array.isArray(liveAdminUserChats[b]) ? liveAdminUserChats[b] : [];
+                const aLastUser = aMsgs.length && aMsgs[aMsgs.length - 1].sender === 'user' ? 1 : 0;
+                const bLastUser = bMsgs.length && bMsgs[bMsgs.length - 1].sender === 'user' ? 1 : 0;
+                return bLastUser - aLastUser;
+            });
+
+            sortedPhones.forEach(ph => {
                 const u = usersDB[ph] || {};
                 const bal = sanitizePositiveInt(userWallets[ph], 0);
                 const isSel = selectedAdminUserPhone === ph;
+                const msgs = Array.isArray(liveAdminUserChats[ph]) ? liveAdminUserChats[ph] : [];
+                const lastMsg = msgs.length ? msgs[msgs.length - 1] : null;
+                const hasNewUserMsg = lastMsg && lastMsg.sender === 'user';
+                const msgPreviewHtml = lastMsg
+                    ? `<div style="margin-top:4px; font-size:0.76rem; color:${hasNewUserMsg ? '#fde047' : '#cbd5e1'}; background:${hasNewUserMsg ? '#3b0764' : '#1e1b33'}; padding:4px 7px; border-radius:5px; border:1px solid ${hasNewUserMsg ? '#c084fc' : '#334155'};">
+                           ${hasNewUserMsg ? '💬 <b>नया मैसेज:</b> ' : '💬 <b>चैट:</b> '}${escapeHtml(lastMsg.text)} <span style="font-size:0.66rem; opacity:0.8;">(${escapeHtml(lastMsg.time || '')})</span>
+                       </div>`
+                    : '';
+
                 listEl.innerHTML += `
-                    <div class="req-card" style="cursor:pointer; border-color:${isSel ? '#38bdf8' : '#444'};" onclick="selectAdminUserInspector('${escapeHtml(ph)}')">
+                    <div class="req-card" style="cursor:pointer; border-color:${isSel ? '#38bdf8' : (hasNewUserMsg ? '#c084fc' : '#444')};" onclick="selectAdminUserInspector('${escapeHtml(ph)}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <b>👤 ${escapeHtml(u.name || ph)} (${escapeHtml(ph)})</b>
+                            <b>👤 ${escapeHtml(u.name || ph)} (${escapeHtml(ph)}) ${hasNewUserMsg ? '<span class="count-pill-badge">💬 LIVE</span>' : ''}</b>
                             <span style="color:#4ade80; font-weight:900;">${bal} Pts</span>
                         </div>
-                        <div style="font-size:0.75rem; color:#94a3b8;">स्थिति: ${u.isLocked ? '🔒 लॉक' : '🟢 सक्रिय'} | विवरण देखने के लिए क्लिक करें</div>
+                        <div style="font-size:0.75rem; color:#94a3b8;">स्थिति: ${u.isLocked ? '🔒 लॉक' : '🟢 सक्रिय'} | पर्सनल चैट व विवरण खोलने के लिए क्लिक करें</div>
+                        ${msgPreviewHtml}
                     </div>
                 `;
             });
@@ -5349,19 +5382,41 @@
             box.innerHTML = all.length ? all.map(x => `<div style="padding:3px 0; border-bottom:1px dashed #333;">${escapeHtml(x)}</div>`).join('') : '<div style="color:#94a3b8;">कोई लेन-देन नहीं मिला।</div>';
         }
 
-        function openRates() { document.getElementById('rates-modal').classList.remove('hidden'); }
+        function renderUserOnlineAdminChatBox() {
+            const hist = document.getElementById('bot-chat-history');
+            if (!hist) return;
+            const u = getCurrentSessionPhone();
+            const msgs = (u && Array.isArray(liveAdminUserChats[u])) ? liveAdminUserChats[u] : [];
+            if (!msgs.length) {
+                hist.innerHTML = `<div class="bot-msg">नमस्कार! <b>Online Admin</b> से सीधे बात करने के लिए नीचे संदेश लिखें और <b>🟢 Online Admin</b> दबाएं।</div>`;
+                return;
+            }
+            hist.innerHTML = msgs.map(m => {
+                if (m.sender === 'user') {
+                    return `<div class="user-msg">${escapeHtml(m.text)} <span style="font-size:0.65rem; opacity:0.75;">(${escapeHtml(m.time || '')})</span></div>`;
+                } else {
+                    return `<div class="bot-msg">👑 <b>Admin:</b> ${escapeHtml(m.text)} <span style="font-size:0.65rem; opacity:0.75;">(${escapeHtml(m.time || '')})</span></div>`;
+                }
+            }).join('');
+            hist.scrollTop = hist.scrollHeight;
+        }
+
+        function openRates() {
+            renderUserOnlineAdminChatBox();
+            document.getElementById('rates-modal').classList.remove('hidden');
+        }
         function closeRates() { document.getElementById('rates-modal').classList.add('hidden'); }
         function openHelp() { openRates(); }
 
-        function askHelpBot() {
+        function sendOnlineAdminChatMessage() {
             const inp = document.getElementById('bot-user-input');
-            const q = inp.value.trim();
-            if (!q) return;
-            const hist = document.getElementById('bot-chat-history');
-            hist.innerHTML += `<div class="user-msg">${escapeHtml(q)}</div>`;
-            hist.innerHTML += `<div class="bot-msg">आपकी सहायता के लिए 'सहायता रिक्वेस्ट भेजें' दबाएं, हमारी टीम तुरंत देखेगी।</div>`;
-            hist.scrollTop = hist.scrollHeight;
+            const msg = inp ? inp.value.trim() : '';
+            if (!msg) return;
+            const u = getCurrentSessionPhone();
+            if (!u) return;
+            sendLiveChatMessageToUser(u, msg, "user");
             inp.value = '';
+            renderUserOnlineAdminChatBox();
         }
 
         function sendRequestToAdmin() {
@@ -5369,15 +5424,16 @@
             const msg = inp.value.trim() || "सहायता अनुरोध";
             helpRequests.unshift({
                 id: Date.now(),
-                user: activeUserPhone || "Guest",
-                type: "Help Request",
+                user: getCurrentSessionPhone() || activeUserPhone || "Guest",
+                type: "सहायता रिक्वेस्ट",
                 message: msg.slice(0, 500),
                 status: "pending",
                 time: getIndiaNow().toLocaleTimeString('en-IN')
             });
             db.ref('helpRequests').set(helpRequests);
             const hist = document.getElementById('bot-chat-history');
-            hist.innerHTML += `<div class="bot-msg">✅ आपकी सहायता रिक्वेस्ट भेज दी गई है!</div>`;
+            hist.innerHTML += `<div class="bot-msg">✅ आपकी सहायता रिक्वेस्ट एडमिन के हेल्प बॉक्स में भेज दी गई है!</div>`;
+            hist.scrollTop = hist.scrollHeight;
             inp.value = '';
         }
 
@@ -5487,25 +5543,123 @@
             if (arrow) arrow.innerText = isHidden ? '▲ छुपाएं' : '▼ खोलें';
         }
 
+        function parseSlotDeclaredOutcome(matched) {
+            if (!matched) return { opPatti: "", opDigit: "", clPatti: "", clDigit: "", jodiVal: "", openDeclared: false, closeDeclared: false };
+            const disp = String(matched.display || '').trim();
+            const parts = disp && disp !== '—' ? disp.split('-').map(x => x.trim()) : [];
+
+            let opPatti = String(matched.openPatti || '').trim();
+            let opDigit = String(matched.openDigit || '').trim();
+            let clPatti = String(matched.closePatti || '').trim();
+            let clDigit = String(matched.closeDigit || '').trim();
+            let jodiVal = String(matched.jodi || '').trim();
+
+            if (!opPatti && parts.length >= 1 && /^\d{3}$/.test(parts[0])) opPatti = parts[0];
+            if (!opDigit && parts.length >= 2 && /^\d{1,2}$/.test(parts[1])) opDigit = parts[1][0];
+            if (!jodiVal && parts.length >= 2 && /^\d{2}$/.test(parts[1])) jodiVal = parts[1];
+            if (!clDigit && jodiVal.length === 2) clDigit = jodiVal[1];
+            if (!clPatti && parts.length >= 3 && /^\d{3}$/.test(parts[2])) clPatti = parts[2];
+            if (!jodiVal && opDigit !== '' && clDigit !== '') jodiVal = `${opDigit}${clDigit}`;
+
+            const openDeclared = Boolean(opDigit !== '' || matched.stage === 'open_declared' || matched.stage === 'closed_declared');
+            const closeDeclared = Boolean(clDigit !== '' || matched.stage === 'closed_declared');
+
+            return { opPatti, opDigit, clPatti, clDigit, jodiVal, openDeclared, closeDeclared };
+        }
+
         function getBetSettlementStatus(bet) {
-            const wonPts = Number(bet.wonPoints) || 0;
-            if (wonPts > 0) {
-                return { status: 'WIN', wonPts };
+            const storedWonPts = Number(bet.wonPoints) || 0;
+            if (storedWonPts > 0) {
+                return { status: 'WIN', wonPts: storedWonPts };
             }
             if (currentMyBetScope === 'amar') {
                 const res = amarMarketResults[bet.marketId] || {};
-                if (bet.session === 'OPEN' && res.openDigit) return { status: 'LOSS', wonPts: 0 };
-                if (bet.session === 'CLOSE' && res.closeDigit) return { status: 'LOSS', wonPts: 0 };
-                if (bet.session === 'JODI' && res.jodi) return { status: 'LOSS', wonPts: 0 };
+                const opP = String(res.openPatti || '').trim();
+                const opD = String(res.openDigit || '').trim();
+                const clP = String(res.closePatti || '').trim();
+                const clD = String(res.closeDigit || '').trim();
+                const jodiStr = String(res.jodi || (opD && clD ? `${opD}${clD}` : '')).trim();
+                const sess = String(bet.session || bet.gameType || '').toUpperCase();
+                const gMode = String(bet.gameMode || '');
+                const num = String(bet.number || '').trim();
+                const pts = Number(bet.points) || 0;
+
+                const calcAmarWinPts = () => {
+                    if (gMode === 'Single Digit') return Math.round(pts * 9.75);
+                    if (gMode === 'Jodi Digit') return Math.round(pts * 11);
+                    if (gMode && gMode.includes('Pana')) return pts * getAmarPanaRateMultiplier(num, gMode);
+                    return 0;
+                };
+
+                if (sess === 'OPEN') {
+                    if (opD !== '' || opP !== '') {
+                        const isMatch = (gMode === 'Single Digit' && opD !== '' && num === opD) ||
+                                        (gMode && gMode.includes('Pana') && opP !== '' && num === opP);
+                        return isMatch ? { status: 'WIN', wonPts: calcAmarWinPts() } : { status: 'LOSS', wonPts: 0 };
+                    }
+                    return { status: 'LIVE', wonPts: 0 };
+                }
+                if (sess === 'JODI') {
+                    if (clD !== '' || jodiStr !== '') {
+                        return (jodiStr !== '' && num === jodiStr)
+                            ? { status: 'WIN', wonPts: calcAmarWinPts() }
+                            : { status: 'LOSS', wonPts: 0 };
+                    }
+                    if (opD !== '') {
+                        return (num.length === 2 && num[0] === opD) ? { status: 'LIVE', wonPts: 0 } : { status: 'LOSS', wonPts: 0 };
+                    }
+                    return { status: 'LIVE', wonPts: 0 };
+                }
+                if (sess === 'CLOSE') {
+                    if (clD !== '' || clP !== '') {
+                        const isMatch = (gMode === 'Single Digit' && clD !== '' && num === clD) ||
+                                        (gMode && gMode.includes('Pana') && clP !== '' && num === clP);
+                        return isMatch ? { status: 'WIN', wonPts: calcAmarWinPts() } : { status: 'LOSS', wonPts: 0 };
+                    }
+                    return { status: 'LIVE', wonPts: 0 };
+                }
                 return { status: 'LIVE', wonPts: 0 };
             } else {
-                const slots = (bet.lotteryType === 'dhan') ? dhanSlotData : shubhSlotData;
-                const matched = slots.find(s => `${s.start} - ${s.end}` === bet.slotTime);
+                const lType = (bet.lotteryType === 'dhan' || String(bet.lottery || '').includes('धन')) ? 'dhan' : 'shubh';
+                const slots = (lType === 'dhan') ? dhanSlotData : shubhSlotData;
+                const betSlotNorm = normalizeSlotTimeStr(bet.slotTime);
+                const matched = slots.find(s => normalizeSlotTimeStr(`${s.start} - ${s.end}`) === betSlotNorm);
                 if (!matched) return { status: 'LIVE', wonPts: 0 };
-                if (bet.gameType === 'OPEN') {
-                    if (matched.stage === 'open_declared' || matched.stage === 'closed_declared') return { status: 'LOSS', wonPts: 0 };
-                } else {
-                    if (matched.stage === 'closed_declared') return { status: 'LOSS', wonPts: 0 };
+
+                const out = parseSlotDeclaredOutcome(matched);
+                const gType = String(bet.gameType || '').toUpperCase();
+                const gMode = String(bet.gameMode || '');
+                const num = String(bet.number || '').trim();
+
+                // Check direct win match against declared slot result (fixes Shubh/Dhan parity even if payout flag lagged)
+                const computedWin = computeLuckBetWinPoints(bet, out.opPatti, out.opDigit, out.clPatti, out.clDigit, out.jodiVal, out.closeDeclared);
+                if (computedWin > 0) {
+                    return { status: 'WIN', wonPts: computedWin };
+                }
+
+                // OPEN bets: settle immediately once open is declared
+                if (gType === 'OPEN') {
+                    if (out.openDeclared) return { status: 'LOSS', wonPts: 0 };
+                    return { status: 'LIVE', wonPts: 0 };
+                }
+
+                // JODI bets: if close declared -> WIN/LOSS; if only open declared -> LIVE only when first digit matches openDigit, else LOSS
+                if (gType === 'JODI' || gMode === 'Jodi Digit') {
+                    if (out.closeDeclared) {
+                        return { status: 'LOSS', wonPts: 0 };
+                    }
+                    if (out.openDeclared && out.opDigit !== '') {
+                        if (num.length === 2 && num[0] === String(out.opDigit)) {
+                            return { status: 'LIVE', wonPts: 0 };
+                        }
+                        return { status: 'LOSS', wonPts: 0 };
+                    }
+                    return { status: 'LIVE', wonPts: 0 };
+                }
+
+                // CLOSE bets: stay LIVE until close is declared, then WIN/LOSS
+                if (out.closeDeclared) {
+                    return { status: 'LOSS', wonPts: 0 };
                 }
                 return { status: 'LIVE', wonPts: 0 };
             }
@@ -5514,7 +5668,6 @@
         function renderMyBetsContent() {
             const cont = document.getElementById('my-bets-container');
             const oldDrawer = document.getElementById('my-bets-yesterday-24hr');
-            const sumBar = document.getElementById('mybet-live-summary');
             if (!cont) return;
 
             const todayKey = getTodayDateKey();
@@ -5524,30 +5677,11 @@
             if (currentMyBetScope === 'amar') {
                 filtered = myAll.filter(b => b.scope === 'amar' || b.isParchi);
             } else {
-                filtered = myAll.filter(b => !b.scope && !b.isParchi && (b.lotteryType || 'shubh') === currentMyBetLuckSubTab);
+                filtered = myAll.filter(b => !b.scope && !b.isParchi && ((b.lotteryType || (String(b.lottery || '').includes('धन') ? 'dhan' : 'shubh')) === currentMyBetLuckSubTab));
             }
 
             const todayBets = filtered.filter(b => (b.dateKey || todayKey) === todayKey);
             const pastBets = filtered.filter(b => (b.dateKey || todayKey) !== todayKey);
-
-            let totalPlayPts = 0;
-            let totalWinPts = 0;
-            let liveCount = 0;
-
-            todayBets.forEach(b => {
-                totalPlayPts += Number(b.points) || 0;
-                const st = getBetSettlementStatus(b);
-                totalWinPts += st.wonPts;
-                if (st.status === 'LIVE') liveCount++;
-            });
-
-            if (sumBar) {
-                sumBar.innerHTML = `
-                    <div class="mybet-sum-item"><span>आज के दांव</span><b>${todayBets.length} (₹${totalPlayPts})</b></div>
-                    <div class="mybet-sum-item"><span>लाइव (बाकी)</span><b style="color:#fde047;">${liveCount}</b></div>
-                    <div class="mybet-sum-item"><span>कुल जीत</span><b style="color:#4ade80;">+${totalWinPts}</b></div>
-                `;
-            }
 
             if (!todayBets.length) {
                 cont.innerHTML = `<div class="notice-box">आज इस सेक्शन में कोई दांव नहीं लगाया गया है।</div>`;
@@ -5646,6 +5780,8 @@
                 shubhSlotData = normalizeSlotsWithDefaults(snap.val(), defaultShubhSlots);
                 renderResults();
                 updateLiveSpotlightBanner();
+                const mbModal = document.getElementById('my-bets-modal');
+                if (mbModal && !mbModal.classList.contains('hidden')) renderMyBetsContent();
             }
         });
 
@@ -5654,6 +5790,8 @@
                 dhanSlotData = normalizeSlotsWithDefaults(snap.val(), defaultDhanSlots);
                 renderResults();
                 updateLiveSpotlightBanner();
+                const mbModal = document.getElementById('my-bets-modal');
+                if (mbModal && !mbModal.classList.contains('hidden')) renderMyBetsContent();
             }
         });
 
@@ -5733,6 +5871,16 @@
 
         db.ref('liveAdminUserChats').on('value', snap => {
             liveAdminUserChats = snap.exists() ? (snap.val() || {}) : {};
+            renderUserOnlineAdminChatBox();
+            updateAdminBadgesAndLiveUsers();
+            const admUsersSec = document.getElementById('adm-sec-users');
+            if (admUsersSec && !admUsersSec.classList.contains('hidden')) {
+                renderAdminUsersList();
+            }
+            const admReqSec = document.getElementById('adm-sec-req');
+            if (admReqSec && !admReqSec.classList.contains('hidden') && selectedHelpUserPhone) {
+                openHelpUserLivePanel(selectedHelpUserPhone);
+            }
         });
 
         db.ref('weeklyGameChatData').on('value', snap => {
